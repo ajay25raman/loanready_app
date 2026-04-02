@@ -54,7 +54,7 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
   final Color _text = const Color(0xFF1E293B);
   final Color _hint = const Color(0xFF64748B);
 
-  static const String _apiUrl = 'https://loan-approval-api-faur.onrender.com/api/v1/trade/one-year';
+  static const String _apiUrl = 'https://loan.edugaondev.com/api/v1/trade/one-year';
 
   Future<void> _fetchOneYearTrading() async {
     if (!_formKey.currentState!.validate()) return;
@@ -426,3 +426,4 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
     );
   }
 }
+

@@ -14,73 +14,52 @@ class AboutUsScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
               'About Us - Loan Ready App',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
 
-            // Mission - EXACT SAME TEXT
+            // Mission
             Text(
               'Our Mission',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 4),
+            SizedBox(height: 6),
             Text(
-              'Loan Ready ka mission hai har vyakti ko asaani se aur surakshit tarike se financial sahayata pahunchana. Hum loan application ko asaan aur transparent banate hain jisme jaldi approval mile.',
+              'Providing a holistic all round support to micro and small business enterprises for them to sustain and flourish in this dynamic and highly competitive market.',
             ),
             SizedBox(height: 16),
 
-            // What We Do - EXACT SAME TEXT
+            // What We Do / How We Serve
             Text(
-              'What We Do',
+              'What We Do / How We Serve',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 4),
+            SizedBox(height: 6),
             Text(
-              'Loan Ready app users ko financial schemes, loan options, aur instant registration ke zariye unke sapne poore karne mein madad karta hai. Hamari service easy registration process aur real-time support provide karti hai.',
+              '• Supporting small and micro entrepreneurs in their businesses through our advisory and consultancy services.\n'
+                  '• Making low interest bearing and collateral free institutional finance available to such businesses.\n'
+                  '• Building a better business resume through proper documentation and record.\n'
+                  '• Helping businesses create a favorable credit profile.',
             ),
             SizedBox(height: 16),
 
-            // Our Values - EXACT SAME TEXT
+            // Why Choose
             Text(
-              'Our Values',
+              'Why Choose Loan Ready',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 4),
+            SizedBox(height: 6),
             Text(
-              '• Transparency: Har step par clear information aur updates.\n'
-                  '• Trust: User data ki suraksha hamara prathamikta hai.\n'
-                  '• Simplicity: Easy navigation aur samajhne mein asaani.',
+              '• We pioneer in providing business consultancy and advisory services to micropreneurs.\n'
+                  '• We solve the problem of securing finance, especially schemes which are collateral free and at lower rates of interest through our document building process.\n'
+                  '• We offer end to end services to secure institutional finance.\n'
+                  '• We build credit worthiness by addressing adverse issues in credit report of such businesses.',
             ),
-            SizedBox(height: 16),
-
-            // Why Choose - EXACT SAME TEXT
-            Text(
-              'Why Choose Loan Ready?',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '• Direct registration process through the app\n'
-                  '• Latest loan schemes information available\n'
-                  '• Reliable customer support through chatbot\n'
-                  '• Safe and secure transactions',
-            ),
-            SizedBox(height: 16),
-
-            // Contact - EXACT SAME TEXT
-            Text(
-              'Contact Us',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 4),
-            Text('For any queries or support, contact us at:'),
-            Text('Email: support@loameadyapp.com'),
-            Text('Phone: +91 98765 43210'),
           ],
         ),
       ),

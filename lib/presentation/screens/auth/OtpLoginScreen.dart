@@ -16,11 +16,10 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
   String? errorText;
   bool isPhoneValid = false;
 
-
   final String countryCode = "+91";
 
-  final String baseUrl =
-      "https://loan-approval-api-faur.onrender.com/api/v1";
+  // ✅ FIXED BASE URL
+  final String baseUrl = "https://loan.edugaondev.com/api/v1";
 
   void validatePhoneNumber() {
     setState(() {
@@ -40,24 +39,35 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     });
 
     try {
+      // ✅ CORRECT ENDPOINT
       final url = Uri.parse("$baseUrl/otp/send");
 
       final response = await http.post(
         url,
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json", // ✅ important
         },
         body: jsonEncode({
           "countryCode": countryCode,
           "mobile": phoneNumber,
-          "templateId":"register"
+          "templateId": "register"
         }),
       );
 
       print("STATUS: ${response.statusCode}");
       print("BODY: ${response.body}");
 
-      final responseData = jsonDecode(response.body);
+      dynamic responseData;
+
+      // ✅ SAFE JSON CHECK
+      if (response.headers['content-type']
+          ?.contains('application/json') ??
+          false) {
+        responseData = jsonDecode(response.body);
+      } else {
+        throw Exception("Server returned HTML instead of JSON");
+      }
 
       if (response.statusCode == 200) {
         final verificationId = responseData["verificationId"];
@@ -77,7 +87,8 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
         );
       } else {
         setState(() {
-          errorText = responseData["message"] ?? "Something went wrong";
+          errorText =
+              responseData["message"] ?? "Something went wrong";
         });
       }
     } catch (e) {
@@ -122,12 +133,12 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-
               Center(
                 child: Image.network(
                   'https://img.freepik.com/free-vector/mobile-login-concept-illustration_114360-83.jpg?w=826',
@@ -135,9 +146,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-
               const SizedBox(height: 40),
-
               const Text(
                 'Enter your phone number',
                 style: TextStyle(
@@ -146,9 +155,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                   color: Colors.black87,
                 ),
               ),
-
               const SizedBox(height: 10),
-
               const Text(
                 "We'll send you a text verification code.",
                 style: TextStyle(
@@ -158,17 +165,16 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 40),
-
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   border: Border.all(
-                    color:
-                    errorText != null ? Colors.red : Colors.grey.shade300,
+                    color: errorText != null
+                        ? Colors.red
+                        : Colors.grey.shade300,
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -183,10 +189,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                       ),
                       child: const Row(
                         children: [
-                          Text(
-                            '🇮🇳',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                          Text('🇮🇳', style: TextStyle(fontSize: 16)),
                           SizedBox(width: 6),
                           Text(
                             '+91',
@@ -226,7 +229,6 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                   ],
                 ),
               ),
-
               if (errorText != null) ...[
                 const SizedBox(height: 8),
                 Align(
@@ -240,14 +242,13 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                   ),
                 ),
               ],
-
               const SizedBox(height: 40),
-
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: (isLoading || !isPhoneValid) ? null : sendOtp,
+                  onPressed:
+                  (isLoading || !isPhoneValid) ? null : sendOtp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isPhoneValid
                         ? const Color(0xFF1A237E)

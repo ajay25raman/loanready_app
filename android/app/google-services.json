@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "665762145495",
+    "project_id": "bhavya-dc633",
+    "storage_bucket": "bhavya-dc633.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665762145495:android:6db79024adb8db5f5f7c92",
+        "android_client_info": {
+          "package_name": "com.example.bhavya_tech"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOwibpdrU-_-pRVZjpSwk0CQ985b_Pc7c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665762145495:android:7659d573269fe8ed5f7c92",
+        "android_client_info": {
+          "package_name": "com.example.loanready_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOwibpdrU-_-pRVZjpSwk0CQ985b_Pc7c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'choose_plan_screen.dart';
 
 class ChoosePlanScreen extends StatefulWidget {
   const ChoosePlanScreen({super.key});
@@ -8,20 +9,84 @@ class ChoosePlanScreen extends StatefulWidget {
 }
 
 class _ChoosePlanScreenState extends State<ChoosePlanScreen> {
-  int selectedPlan = 0; // 0 = none, 1 = basic, 2 = standard, 3 = premium
+  int selectedPlan = 0;
+
+  final List<Map<String, dynamic>> plans = [
+    {
+      "id": 1,
+      "title": "PLAN A",
+      "price": "199",
+      "features": [
+        "Free On-Boarding",
+        "Access to information repository",
+        "Chat Bot assistance",
+        "Assistance on choosing the right collateral free loan"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "PLAN B",
+      "price": "499",
+      "features": [
+        "Free On-Boarding",
+        "Access to information repository",
+        "Chat Bot assistance",
+        "Assistance on choosing the right collateral free loan",
+        "Issuance of financial report (part of loan documents)",
+        "Access to our business advisors and consultants through Watsapp or text"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "PLAN C",
+      "price": "699",
+      "features": [
+        "Free On-Boarding",
+        "Access to information repository",
+        "Chat Bot assistance",
+        "Assistance on choosing the right collateral free loan",
+        "Issuance of financial report (part of loan documents)",
+        "Access to our business advisors and consultants through Watsapp or text",
+        "Filing of Income Tax Returns",
+        "Access to 24x7 ON-Call advisory services"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "PLAN D",
+      "price": "1299",
+      "features": [
+        "Free On-Boarding",
+        "Access to information repository",
+        "Chat Bot assistance",
+        "Assistance on choosing the right collateral free loan",
+        "Issuance of financial report (part of loan documents)",
+        "Access to our business advisors and consultants through Watsapp or text",
+        "Filing of Income Tax Returns",
+        "Access to 24x7 ON-Call advisory services",
+        "Credit Report Enhancement Services",
+        "Overall assistance in loan applications"
+      ]
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F3FF), // Light blue bg
+      backgroundColor: const Color(0xFFF2F3FF),
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
         actions: [
           TextButton(
             onPressed: () {
-              // Skip pe click hone pe kya karna hai
+              Navigator.pushNamed(context, '/confirmPayment');
             },
             child: const Text(
               'Skip',
@@ -35,141 +100,124 @@ class _ChoosePlanScreenState extends State<ChoosePlanScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Text(
-                "Choose Your Plan",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                "Select a plan that best suits your business need",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final cardHeight = constraints.maxHeight * 0.45;
 
-              /// 🔹 GridView wrapped inside shrinkWrap ListView
-              GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 0.75, // Adjusted ratio
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 children: [
-                  planCard("Basic", "₹499", "/year", 1),
-                  planCard("Standard", "₹999", "/year", 2),
-                  planCard("Premium", "₹1499", "/year", 3),
+                  const Text(
+                    "Choose Your Plan",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 20),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: constraints.maxWidth > 600 ? 4 : 2,
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 14,
+                      mainAxisExtent: cardHeight,
+                    ),
+                    itemCount: plans.length,
+                    itemBuilder: (context, index) {
+                      final plan = plans[index];
+                      return planCard(plan, cardHeight);
+                    },
+                  ),
                 ],
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget planCard(String title, String price, String duration, int index) {
-    final isSelected = selectedPlan == index;
+  Widget planCard(Map<String, dynamic> plan, double cardHeight) {
+    final isSelected = selectedPlan == plan['id'];
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          selectedPlan = index;
-        });
+        setState(() => selectedPlan = plan['id']);
       },
       child: Container(
+        height: cardHeight,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected ? const Color(0xFF002D72) : Colors.transparent,
             width: 1.5,
           ),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
+              plan['title'],
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 6),
-            Text.rich(
-              TextSpan(
-                text: price,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-                children: [
-                  TextSpan(
-                    text: duration,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
+            Text(
+              "${plan['price']} /year",
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 10),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check, color: Colors.green, size: 18),
-                SizedBox(width: 4),
-                Text(
-                  "Loan Information",
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: plan['features']
+                      .map<Widget>((feature) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(Icons.check,
+                              size: 16, color: Colors.green),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            feature,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ))
+                      .toList(),
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 4),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check, color: Colors.green, size: 18),
-                SizedBox(width: 4),
-                Text(
-                  "Documents Upload",
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
-                ),
-              ],
-            ),
-            const Spacer(),
+            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               height: 38,
               child: ElevatedButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$title Plan Selected!')),
+                  Navigator.pushNamed(
+                    context,
+                    '/confirmPayment',
+                    arguments: plan,
                   );
-                  Navigator.pushNamed(context, '/confirmPayment');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF002D72),
@@ -179,7 +227,7 @@ class _ChoosePlanScreenState extends State<ChoosePlanScreen> {
                 ),
                 child: const Text(
                   "Select Plan",
-                  style: TextStyle(fontSize: 14, color: Colors.white),
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ),
