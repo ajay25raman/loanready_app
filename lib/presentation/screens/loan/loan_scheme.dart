@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../plan/choose_plan_screen.dart';
 
 class LoanSchemeFormScreen extends StatefulWidget {
@@ -16,9 +15,9 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
   int _currentPage = 0;
   bool _isLoading = false;
 
-  // Government schemes data – exactly as per PDF
+  // Government schemes data – exactly as per PDF (unchanged)
   final List<Map<String, dynamic>> _allGovtSchemes = [
-    // PM SVANidhi (not in PDF, kept as is)
+    // PM SVANidhi
     {
       'name': 'PM SVANidhi (Street Vendors)',
       'category': 'Street Vendors',
@@ -33,49 +32,35 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'documents': 'Aadhaar, Voter ID, street vending certificate, bank account',
       'collateral': 'No Collateral',
     },
-    // PM Vishwakarma Yojana (PDF page 3)
+    // PM Vishwakarma Yojana
     {
       'name': 'PM Vishwakarma Yojana',
       'category': 'Artisan',
       'typeOfLoan': 'Term Loan',
       'targetGroups': [
-        'Carpenter (Suthar)',
-        'Boat Maker',
-        'Armourer',
-        'Blacksmith (Lohar)',
-        'Hammer and Tool Kit Maker',
-        'Locksmith',
-        'Sculptor (Moortikar, Stone Carver)',
-        'Goldsmith (Sunar)',
-        'Potter (Kumhaar)',
-        'Cobbler (Charmaker)/Footwear Artisan',
-        'Masons (Raaj Mistri)',
-        'Basket/Mat/Broom Maker',
-        'Doll & Toy Maker (Traditional)',
-        'Barber (Naai)',
-        'Garland Maker (Malakaar)',
-        'Washerman (Dhobi)',
-        'Tailor (Darzi)',
-        'Fishing Net Maker',
+        'Carpenter (Suthar)', 'Boat Maker', 'Armourer', 'Blacksmith (Lohar)',
+        'Hammer and Tool Kit Maker', 'Locksmith', 'Sculptor (Moortikar, Stone Carver)',
+        'Goldsmith (Sunar)', 'Potter (Kumhaar)', 'Cobbler (Charmaker)/Footwear Artisan',
+        'Masons (Raaj Mistri)', 'Basket/Mat/Broom Maker', 'Doll & Toy Maker (Traditional)',
+        'Barber (Naai)', 'Garland Maker (Malakaar)', 'Washerman (Dhobi)',
+        'Tailor (Darzi)', 'Fishing Net Maker',
       ],
       'loanAmount': '1st Tranche: ₹1,00,000, 2nd Tranche: ₹2,00,000',
       'tenure': '18 months (1st), 30 months (2nd)',
       'margin': 'Nil (collateral free)',
       'guarantee': 'Yes (collateral free credit)',
-      'purpose':
-      'Enable recognition of artisans, skill upgradation, support for modern tools, collateral free credit, digital incentives, brand promotion.',
+      'purpose': 'Enable recognition of artisans, skill upgradation, support for modern tools, collateral free credit, digital incentives, brand promotion.',
       'benefits': 'Interest subvention to make effective rate 5%',
       'documents': 'Aadhaar, artisan proof, bank account, recent photograph',
       'collateral': 'No Collateral',
     },
-    // PM Mudra Yojana (PDF page 4)
+    // PM Mudra Yojana
     {
       'name': 'PM Mudra Yojana',
       'category': 'Business',
       'typeOfLoan': 'Term Loan',
       'targetGroups': ['Micro Enterprises', 'Small Business'],
-      'loanAmount':
-      'Shishu: up to ₹50,000; Kishore: ₹50,001-₹5 lakh; Tarun: ₹5-10 lakh; Tarun Plus: ₹10-20 lakh',
+      'loanAmount': 'Shishu: up to ₹50,000; Kishore: ₹50,001-₹5 lakh; Tarun: ₹5-10 lakh; Tarun Plus: ₹10-20 lakh',
       'tenure': 'Up to 5 years (below ₹5 lakh), up to 7 years (₹5-20 lakh)',
       'margin': 'Up to ₹50,000: Nil; above: 20%',
       'guarantee': 'CGFMU',
@@ -84,7 +69,7 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'documents': 'KYC, business proof, project report if applicable',
       'collateral': 'No Collateral',
     },
-    // Stand-Up India (PDF page 4)
+    // Stand-Up India
     {
       'name': 'Stand-Up India',
       'category': 'SC/ST/Women',
@@ -94,20 +79,18 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'tenure': '7 years (max moratorium 18 months)',
       'margin': '15% (can be converged with other schemes)',
       'guarantee': 'CGSSI – Max 80%',
-      'purpose':
-      'Setting up a new enterprise in manufacturing, trading, or services sector by SC/ST/women.',
+      'purpose': 'Setting up a new enterprise in manufacturing, trading, or services sector by SC/ST/women.',
       'benefits': 'Credit guarantee up to 80%',
       'documents': 'KYC, business plan, project report, caste/category certificate',
       'collateral': 'No Collateral',
     },
-    // PMEGP (PDF page 5)
+    // PMEGP
     {
       'name': 'PMEGP',
       'category': 'Employment',
       'typeOfLoan': 'Term Loan',
       'targetGroups': ['Individuals (18+ years)', 'SHGs', 'Trusts', 'Institutions'],
-      'loanAmount':
-      'Manufacturing: up to ₹50 lakh; Service/Business: up to ₹20 lakh; Upgradation: up to ₹1 crore',
+      'loanAmount': 'Manufacturing: up to ₹50 lakh; Service/Business: up to ₹20 lakh; Upgradation: up to ₹1 crore',
       'tenure': '3-7 years',
       'margin': 'General: 10%; Special (SC/ST/OBC/etc): 5%',
       'guarantee': 'CGFMU (up to ₹10 lakh) / CGTMSE (above ₹10 lakh)',
@@ -116,14 +99,13 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'documents': 'Project report, educational qualification proof (if applicable), KYC',
       'collateral': 'No Collateral',
     },
-    // DAY-NULM (PDF page 6)
+    // DAY-NULM
     {
       'name': 'DAY-NULM',
       'category': 'Urban',
       'typeOfLoan': 'Term Loan',
       'targetGroups': ['Urban Poor', 'Street Vendors', 'SHGs'],
-      'loanAmount':
-      'Individual: up to ₹2 lakh; SHG: up to ₹2 lakh per member or ₹10 lakh whichever lower',
+      'loanAmount': 'Individual: up to ₹2 lakh; SHG: up to ₹2 lakh per member or ₹10 lakh whichever lower',
       'tenure': '5-7 years (moratorium 6-18 months)',
       'margin': 'Up to ₹50,000: Nil; above: 5-10%',
       'guarantee': 'CGTMSE',
@@ -132,7 +114,7 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'documents': 'KYC, proof of urban poor status, SHG resolution if applicable',
       'collateral': 'No Collateral',
     },
-    // PM Awas Yojana (kept as is – not in PDF)
+    // PM Awas Yojana
     {
       'name': 'PM Awas Yojana (Housing Loan Subsidy)',
       'category': 'Housing',
@@ -147,7 +129,7 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'documents': 'Aadhaar, income proof, property documents',
       'collateral': 'No Collateral',
     },
-    // PM Surya Ghar Yojana (PDF page 8)
+    // PM Surya Ghar Yojana
     {
       'name': 'PM Surya Ghar Yojana',
       'category': 'Solar',
@@ -159,11 +141,10 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'guarantee': 'No (hypothecation of assets)',
       'purpose': 'Installation of rooftop solar panels',
       'benefits': 'Subsidy under PM Surya Ghar scheme',
-      'documents':
-      'Up to 3 KW: KYC, electricity bill; >3 KW: KYC, IT returns/Form-16, salary statement, electricity bill',
+      'documents': 'Up to 3 KW: KYC, electricity bill; >3 KW: KYC, IT returns/Form-16, salary statement, electricity bill',
       'collateral': 'No Collateral',
     },
-    // Agriculture Infrastructure Fund (AIF) – kept as is, not in PDF
+    // Agriculture Infrastructure Fund
     {
       'name': 'Agriculture Infrastructure Fund (AIF)',
       'category': 'Agriculture',
@@ -178,28 +159,25 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'documents': 'Project report, land records, KYC',
       'collateral': 'No Collateral',
     },
-    // ACABC Scheme (PDF page 10)
+    // ACABC Scheme
     {
       'name': 'ACABC Scheme',
       'category': 'Agriculture',
       'typeOfLoan': 'Term Loan',
       'targetGroups': [
-        'Agriculture Graduates',
-        'Diploma Holders in Agriculture',
-        'Biological Science Graduates with PG in Agriculture',
-        'Plus two with agriculture',
+        'Agriculture Graduates', 'Diploma Holders in Agriculture',
+        'Biological Science Graduates with PG in Agriculture', 'Plus two with agriculture',
       ],
       'loanAmount': '₹25,000 - ₹2 Crores',
       'tenure': 'As per project',
       'margin': 'Up to ₹5 lakh: Nil; ₹5-10 lakh: 10%; above ₹10 lakh: 25%',
       'guarantee': 'May require collateral for higher loans',
-      'purpose':
-      'Setting up Agri‑Clinics (expert advice) or Agri‑Business Centers (custom hiring, input sales, etc.)',
+      'purpose': 'Setting up Agri‑Clinics (expert advice) or Agri‑Business Centers (custom hiring, input sales, etc.)',
       'benefits': 'Training by MANAGE, handholding support',
       'documents': 'Educational certificates, project report, KYC',
       'collateral': 'No Collateral',
     },
-    // PM FME (PDF page 12-13)
+    // PM FME
     {
       'name': 'PM FME',
       'category': 'Food Processing',
@@ -209,14 +187,12 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       'tenure': 'Max 10 years (moratorium up to 24 months)',
       'margin': '10%',
       'guarantee': 'Yes (credit guarantee available)',
-      'purpose':
-      'Build capability of micro food processing enterprises, integrate with supply chain, access to common services.',
-      'benefits':
-      'Credit linked capital subsidy @35% (max ₹10 lakh) for individuals; 35% grant for groups; convergence with AIF gives additional 3% interest subvention',
+      'purpose': 'Build capability of micro food processing enterprises, integrate with supply chain, access to common services.',
+      'benefits': 'Credit linked capital subsidy @35% (max ₹10 lakh) for individuals; 35% grant for groups; convergence with AIF gives additional 3% interest subvention',
       'documents': 'Project report, KYC, business plan',
       'collateral': 'No Collateral',
     },
-    // CSIS Education Loan (PDF page 14)
+    // CSIS Education Loan
     {
       'name': 'CSIS (Education Loan Interest Subsidy)',
       'category': 'Education',
@@ -246,7 +222,6 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
   final TextEditingController _documentsController = TextEditingController();
   final TextEditingController _collateralController = TextEditingController();
 
-  // Selected values (editable ones)
   String _selectedScheme = '';
   String _selectedCategory = '';
   String _loanType = 'Term Loan';
@@ -262,14 +237,10 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
 
   void _onSearchChanged() {
     final query = _searchController.text.toLowerCase().trim();
-
     if (query.isEmpty) {
-      setState(() {
-        _filteredSchemes = List.from(_allGovtSchemes);
-      });
+      setState(() => _filteredSchemes = List.from(_allGovtSchemes));
       return;
     }
-
     setState(() {
       _filteredSchemes = _allGovtSchemes.where((scheme) {
         if (scheme['name'].toLowerCase().contains(query)) return true;
@@ -301,16 +272,18 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
   }
 
   void _nextPage() {
-    // 🚨 Step 1 validation
     if (_currentPage == 0 && _selectedScheme.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a scheme first'),
+        SnackBar(
+          content: const Text('Please select a scheme first'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ),
       );
       return;
     }
-
     if (_currentPage < 2 && _formKey.currentState?.validate() == true) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -319,7 +292,6 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       setState(() => _currentPage++);
     }
   }
-
 
   void _previousPage() {
     if (_currentPage > 0) {
@@ -333,7 +305,6 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
 
   void _selectScheme(Map<String, dynamic> scheme) {
     setState(() {
-      // ✅ clear first (pro UX)
       _schemeNameController.clear();
       _loanAmountController.clear();
       _tenureController.clear();
@@ -347,48 +318,33 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
       _selectedScheme = scheme['name'];
       _selectedCategory = scheme['category'];
 
-
-      // Auto-fill all read‑only fields
       _schemeNameController.text = scheme['name'];
       _loanAmountController.text = scheme['loanAmount'] ?? '';
       _tenureController.text = scheme['tenure'] ?? '';
       _marginController.text = scheme['margin'] ?? '';
-
       if (scheme['targetGroups'] is List) {
         _targetGroupController.text = (scheme['targetGroups'] as List).join(', ');
       }
-
       _purposeController.text = scheme['purpose'] ?? '';
       _benefitsController.text = scheme['benefits'] ?? '';
       _documentsController.text = scheme['documents'] ?? '';
       _collateralController.text = scheme['collateral'] ?? 'No Collateral';
-
-      // Auto-fill editable fields
       _loanType = scheme['typeOfLoan'] ?? 'Term Loan';
       _hasSubsidy = scheme['benefits']?.toLowerCase().contains('subsidy') ?? false;
-      final guarantee =
-      (scheme['guarantee'] ?? '').toString().toLowerCase();
+      final guarantee = (scheme['guarantee'] ?? '').toString().toLowerCase();
       _hasGuarantee = guarantee != 'no' && guarantee.isNotEmpty;
-
     });
   }
 
   Future<void> _submitForm() async {
     if (_formKey.currentState?.validate() != true) return;
-
     setState(() => _isLoading = true);
-
-    // Simulate network delay
     await Future.delayed(const Duration(seconds: 1));
-
     setState(() => _isLoading = false);
-
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const ChoosePlanScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const ChoosePlanScreen()),
       );
     }
   }
@@ -416,94 +372,95 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           'Loan Scheme',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
+            letterSpacing: -0.3,
             color: Colors.white,
           ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF1A237E),
+        backgroundColor: const Color(0xFF1A2C3E), // matching slate
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: Column(
-        children: [
-          // Step indicator
-          ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: 60,
-              maxHeight: 80,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: const BoxDecoration(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: const [Color(0xFFFFFFFF), Color(0xFFF0F4F8)],
+          ),
+        ),
+        child: Column(
+          children: [
+            // Step indicator (premium style)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
                 color: Colors.white,
+                borderRadius: BorderRadius.circular(40),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
+                    color: const Color(0xFF1A2C3E).withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                    spreadRadius: -2,
                   ),
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildStepIndicator(0, 'Select Scheme'),
-                  Container(
-                    width: 40,
-                    height: 1,
-                    color: Colors.grey[300],
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  _buildStepIndicator(1, 'View Details'),
-                  Container(
-                    width: 40,
-                    height: 1,
-                    color: Colors.grey[300],
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
+                  _buildStepIndicator(0, 'Select'),
+                  _buildStepConnector(),
+                  _buildStepIndicator(1, 'Details'),
+                  _buildStepConnector(),
                   _buildStepIndicator(2, 'Review'),
                 ],
               ),
             ),
-          ),
-
-          // Form content
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildStep1(),
-                  _buildStep2(),
-                  _buildStep3(),
-                ],
+            // Form content
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildStep1(),
+                    _buildStep2(),
+                    _buildStep3(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(top: BorderSide(color: Colors.grey[300]!)),
-            boxShadow: const [
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
               BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(0, -2),
+                color: const Color(0xFF1A2C3E).withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+                spreadRadius: -2,
               ),
             ],
           ),
@@ -515,16 +472,17 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
                     onPressed: _previousPage,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Color(0xFF1A237E)),
+                      side: const BorderSide(color: Color(0xFF1A2C3E), width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      foregroundColor: const Color(0xFF1A2C3E),
                     ),
                     child: const Text(
                       'Back',
                       style: TextStyle(
-                        color: Color(0xFF1A237E),
                         fontWeight: FontWeight.w600,
+                        fontSize: 15,
                       ),
                     ),
                   ),
@@ -534,12 +492,13 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
                 child: ElevatedButton(
                   onPressed: _currentPage == 2 ? _submitForm : _nextPage,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A237E),
+                    backgroundColor: const Color(0xFF1A2C3E),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 0,
+                    shadowColor: const Color(0xFF1A2C3E).withOpacity(0.3),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -555,6 +514,8 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ),
@@ -566,20 +527,37 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
     );
   }
 
+  Widget _buildStepConnector() {
+    return Container(
+      width: 30,
+      height: 1,
+      color: const Color(0xFFC9A227).withOpacity(0.3),
+    );
+  }
+
   Widget _buildStepIndicator(int stepNumber, String label) {
     bool isActive = _currentPage == stepNumber;
     bool isCompleted = _currentPage > stepNumber;
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 28,
-          height: 28,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
-            color: isActive || isCompleted ? const Color(0xFF1A237E) : Colors.grey[300],
+            color: isActive || isCompleted ? const Color(0xFF1A2C3E) : const Color(0xFFE2E8F0),
             shape: BoxShape.circle,
+            boxShadow: isActive
+                ? [
+              BoxShadow(
+                color: const Color(0xFF1A2C3E).withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ]
+                : [],
           ),
           child: Center(
             child: isCompleted
@@ -587,71 +565,73 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
                 : Text(
               '${stepNumber + 1}',
               style: TextStyle(
-                color: isActive ? Colors.white : Colors.grey[600],
-                fontWeight: FontWeight.bold,
+                color: isActive ? Colors.white : const Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: isActive ? const Color(0xFF1A237E) : Colors.grey[600],
+            fontSize: 11,
+            color: isActive ? const Color(0xFF1A2C3E) : const Color(0xFF94A3B8),
             fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            letterSpacing: -0.2,
           ),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 
+  // Step 1: Select Scheme (Premium Cards)
   Widget _buildStep1() {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          margin: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1A2C3E).withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+                spreadRadius: -2,
+              ),
+            ],
+          ),
+          child: Row(
             children: [
-              const Text(
-                'Select Government Scheme',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E),
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Choose from existing schemes (details are read‑only)',
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
               Container(
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
+                  color: const Color(0xFFC9A227).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: const Icon(Icons.search_rounded, color: Color(0xFFC9A227), size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
                 child: TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
+                  style: const TextStyle(fontSize: 15),
                   decoration: InputDecoration(
                     hintText: 'Search by name, category, or target group...',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: EdgeInsets.zero,
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                      icon: const Icon(Icons.clear, size: 20),
-                      onPressed: () {
-                        _searchController.clear();
-                      },
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () => _searchController.clear(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     )
                         : null,
                   ),
@@ -662,108 +642,109 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
         ),
         Expanded(
           child: _filteredSchemes.isEmpty
-              ? const Center(
+              ? Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.search_off, size: 48, color: Colors.grey),
-                SizedBox(height: 16),
+                Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
                 Text(
                   'No schemes found',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Try a different search term',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                 ),
               ],
             ),
           )
               : ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             itemCount: _filteredSchemes.length,
             itemBuilder: (context, index) {
               final scheme = _filteredSchemes[index];
               bool isSelected = _selectedScheme == scheme['name'];
-
               return Container(
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFE8EAF6) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF1A237E) : Colors.grey[300]!,
-                    width: isSelected ? 2 : 1,
+                    color: isSelected ? const Color(0xFFC9A227) : const Color(0xFFE2E8F0),
+                    width: isSelected ? 1.5 : 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      color: const Color(0xFF1A2C3E).withOpacity(0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                      spreadRadius: -2,
                     ),
                   ],
                 ),
-                child: ListTile(
-                  onTap: () => _selectScheme(scheme),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A237E).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.account_balance,
-                      size: 24,
-                      color: Color(0xFF1A237E),
-                    ),
-                  ),
-                  title: Text(
-                    scheme['name'],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A237E),
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        scheme['category'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _selectScheme(scheme),
+                    borderRadius: BorderRadius.circular(24),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A2C3E).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: const Icon(Icons.account_balance, size: 24, color: Color(0xFF1A2C3E)),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  scheme['name'],
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1A2C3E),
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  scheme['category'],
+                                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  scheme['loanAmount'],
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFC9A227),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFC9A227).withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.check, size: 18, color: Color(0xFFC9A227)),
+                            ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        scheme['loanAmount'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  trailing: isSelected
-                      ? const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF1A237E),
-                  )
-                      : null,
                 ),
               );
             },
@@ -773,97 +754,64 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
     );
   }
 
-  // Step 2: only Category, Loan Type, and checkboxes are editable
+  // Step 2: View Details (Editable + Read-only)
   Widget _buildStep2() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Scheme Details',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A237E),
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1A2C3E),
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Category, Loan Type, and Features are editable; all other fields are read‑only.',
-            style: TextStyle(color: Colors.grey),
+          const SizedBox(height: 6),
+          Text(
+            'Category, Loan Type, and Features are editable',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600, letterSpacing: -0.2),
           ),
           const SizedBox(height: 24),
-
-          // Scheme Name (read‑only)
-          _buildFormField(
-            label: 'Scheme Name*',
+          // Scheme Name (read-only)
+          _buildPremiumFormField(
+            label: 'Scheme Name',
             controller: _schemeNameController,
-            hint: 'e.g., PM Mudra Yojana',
+            hint: 'Select a scheme first',
             readOnly: true,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Scheme name is required';
-              }
-              return null;
-            },
+            isRequired: true,
           ),
-          const SizedBox(height: 16),
-
-          // Category (editable)
-          _buildDropdownField(
-            label: 'Category*',
+          const SizedBox(height: 20),
+          // Category (editable dropdown)
+          _buildPremiumDropdown(
+            label: 'Category',
             value: _selectedCategory,
             items: const [
-              'Street Vendors',
-              'Artisan',
-              'Business',
-              'SC/ST/Women',
-              'Employment',
-              'Urban',
-              'Housing',
-              'Solar',
-              'Agriculture',
-              'Food Processing',
-              'Education',
-              'Other'
+              'Street Vendors', 'Artisan', 'Business', 'SC/ST/Women', 'Employment',
+              'Urban', 'Housing', 'Solar', 'Agriculture', 'Food Processing', 'Education', 'Other'
             ],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() => _selectedCategory = value);
-              }
-            },
-            enabled: true,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Category is required';
-              }
-              return null;
-            },
+            onChanged: (val) => setState(() => _selectedCategory = val!),
+            isRequired: true,
           ),
-          const SizedBox(height: 16),
-
-          // Loan Amount + Collateral (both read‑only)
+          const SizedBox(height: 20),
+          // Loan Amount + Collateral (both read-only)
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildFormField(
-                  label: 'Loan Amount Range*',
+                child: _buildPremiumFormField(
+                  label: 'Loan Amount Range',
                   controller: _loanAmountController,
                   hint: 'e.g., ₹50,000 - ₹5 lakh',
                   readOnly: true,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Loan amount is required';
-                    }
-                    return null;
-                  },
+                  isRequired: true,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildFormField(
+                child: _buildPremiumFormField(
                   label: 'Collateral',
                   controller: _collateralController,
                   hint: 'No Collateral',
@@ -872,14 +820,12 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // Tenure + Margin (read‑only)
+          const SizedBox(height: 20),
+          // Tenure + Margin
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildFormField(
+                child: _buildPremiumFormField(
                   label: 'Tenure',
                   controller: _tenureController,
                   hint: 'e.g., 5 years',
@@ -888,152 +834,147 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildFormField(
+                child: _buildPremiumFormField(
                   label: 'Margin %',
                   controller: _marginController,
-                  hint: 'e.g., 10% or Nil',
+                  hint: 'e.g., 10%',
                   readOnly: true,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // Loan Type (editable)
-          _buildDropdownField(
+          const SizedBox(height: 20),
+          // Loan Type (editable dropdown)
+          _buildPremiumDropdown(
             label: 'Type of Loan',
             value: _loanType,
             items: const ['Term Loan', 'Working Capital', 'Composite Loan', 'Overdraft', 'CC/OD'],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() => _loanType = value);
-              }
-            },
-            enabled: true,
+            onChanged: (val) => setState(() => _loanType = val!),
           ),
-          const SizedBox(height: 16),
-
-          // Target Group (read‑only)
-          _buildFormField(
+          const SizedBox(height: 20),
+          // Target Group (read-only)
+          _buildPremiumFormField(
             label: 'Target Group / Eligibility',
             controller: _targetGroupController,
-            hint: 'e.g., SC/ST, Women Entrepreneurs, Micro Enterprises',
+            hint: 'Eligible groups',
             maxLines: 2,
             readOnly: true,
           ),
-          const SizedBox(height: 16),
-
-          // Purpose (read‑only)
-          _buildFormField(
+          const SizedBox(height: 20),
+          // Purpose (read-only)
+          _buildPremiumFormField(
             label: 'Purpose of Loan',
             controller: _purposeController,
-            hint: 'e.g., Business expansion, Working capital',
+            hint: 'Loan purpose',
             maxLines: 2,
             readOnly: true,
           ),
-          const SizedBox(height: 16),
-
-          // Checkboxes for features (editable)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Scheme Features',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
+          const SizedBox(height: 20),
+          // ========== FIXED: Responsive Scheme Features (Wrap instead of Row) ==========
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFD),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Scheme Features',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A2C3E)),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Checkbox(
-                    value: _hasSubsidy,
-                    onChanged: (value) {
-                      setState(() => _hasSubsidy = value ?? false);
-                    },
-                    activeColor: const Color(0xFF1A237E),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 24, // horizontal gap between items
+                  runSpacing: 12, // vertical gap when wrapped
+                  children: [
+                    // Subsidy Checkbox
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: _hasSubsidy,
+                          onChanged: (val) => setState(() => _hasSubsidy = val ?? false),
+                          activeColor: const Color(0xFFC9A227),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                        const Text('Government Subsidy', style: TextStyle(fontSize: 14)),
+                      ],
                     ),
-                  ),
-                  const Text('Government Subsidy', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 20),
-                  Checkbox(
-                    value: _hasGuarantee,
-                    onChanged: (value) {
-                      setState(() => _hasGuarantee = value ?? false);
-                    },
-                    activeColor: const Color(0xFF1A237E),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
+                    // Guarantee Checkbox
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: _hasGuarantee,
+                          onChanged: (val) => setState(() => _hasGuarantee = val ?? false),
+                          activeColor: const Color(0xFFC9A227),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                        const Text('Credit Guarantee', style: TextStyle(fontSize: 14)),
+                      ],
                     ),
-                  ),
-                  const Text('Credit Guarantee', style: TextStyle(fontSize: 14)),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-
-          // Benefits (read‑only)
-          _buildTextAreaField(
+          // ================================================================
+          const SizedBox(height: 20),
+          // Benefits (read-only)
+          _buildPremiumTextArea(
             label: 'Special Benefits',
             controller: _benefitsController,
-            hint: 'e.g., Interest subsidy, Digital incentives',
+            hint: 'Benefits description',
             readOnly: true,
           ),
-          const SizedBox(height: 16),
-
-          // Documents (read‑only)
-          _buildTextAreaField(
+          const SizedBox(height: 20),
+          // Documents (read-only)
+          _buildPremiumTextArea(
             label: 'Documents Required',
             controller: _documentsController,
-            hint: 'e.g., Aadhaar, PAN, Bank Statements',
+            hint: 'List of documents',
             readOnly: true,
           ),
-
-          const SizedBox(height: 80),
+          const SizedBox(height: 100),
         ],
       ),
     );
   }
 
+  // Step 3: Review & Submit
   Widget _buildStep3() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Review & Submit',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A237E),
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1A2C3E),
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Review all details before submission',
-            style: TextStyle(color: Colors.grey),
-          ),
+          const SizedBox(height: 6),
+          Text('Review all details before submission', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
           const SizedBox(height: 24),
-
-          // Summary Card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-              boxShadow: const [
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
+                  color: const Color(0xFF1A2C3E).withOpacity(0.06),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -4,
                 ),
               ],
             ),
@@ -1042,106 +983,101 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
               children: [
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8EAF6),
-                      borderRadius: BorderRadius.circular(20),
+                      color: const Color(0xFFC9A227).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                     child: const Text(
                       'SCHEME SUMMARY',
                       style: TextStyle(
-                        color: Color(0xFF1A237E),
-                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFC9A227),
+                        fontWeight: FontWeight.w700,
                         fontSize: 12,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                _buildSummaryRow('Scheme Name', _schemeNameController.text),
-                _buildSummaryRow('Category', _selectedCategory),
-                _buildSummaryRow('Target Group', _targetGroupController.text),
-                _buildSummaryRow('Loan Amount', _loanAmountController.text),
-                _buildSummaryRow('Tenure', _tenureController.text),
-                _buildSummaryRow('Margin', _marginController.text),
-                _buildSummaryRow('Collateral', _collateralController.text),
-                _buildSummaryRow('Loan Type', _loanType),
-                _buildSummaryRow('Government Subsidy', _hasSubsidy ? 'Yes' : 'No'),
-                _buildSummaryRow('Credit Guarantee', _hasGuarantee ? 'Yes' : 'No'),
-                if (_purposeController.text.isNotEmpty)
-                  _buildSummaryRow('Purpose', _purposeController.text),
+                const SizedBox(height: 24),
+                _buildPremiumSummaryRow('Scheme Name', _schemeNameController.text),
+                _buildPremiumSummaryRow('Category', _selectedCategory),
+                _buildPremiumSummaryRow('Target Group', _targetGroupController.text),
+                _buildPremiumSummaryRow('Loan Amount', _loanAmountController.text),
+                _buildPremiumSummaryRow('Tenure', _tenureController.text),
+                _buildPremiumSummaryRow('Margin', _marginController.text),
+                _buildPremiumSummaryRow('Collateral', _collateralController.text),
+                _buildPremiumSummaryRow('Loan Type', _loanType),
+                _buildPremiumSummaryRow('Subsidy', _hasSubsidy ? 'Yes' : 'No'),
+                _buildPremiumSummaryRow('Credit Guarantee', _hasGuarantee ? 'Yes' : 'No'),
+                if (_purposeController.text.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  const Text('Purpose:', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A2C3E))),
+                  const SizedBox(height: 6),
+                  Text(_purposeController.text, style: const TextStyle(color: Color(0xFF475569))),
+                ],
                 if (_benefitsController.text.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  const Text(
-                    'Special Benefits:',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _benefitsController.text,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  const Text('Benefits:', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A2C3E))),
+                  const SizedBox(height: 6),
+                  Text(_benefitsController.text, style: const TextStyle(color: Color(0xFF475569))),
                 ],
                 if (_documentsController.text.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  const Text(
-                    'Documents Required:',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _documentsController.text,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  const Text('Documents:', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A2C3E))),
+                  const SizedBox(height: 6),
+                  Text(_documentsController.text, style: const TextStyle(color: Color(0xFF475569))),
                 ],
               ],
             ),
           ),
-
           const SizedBox(height: 24),
-
-          // Confirmation
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F7FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFD1E9FF)),
+              color: const Color(0xFFF0F9FF),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFC9A227).withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                Checkbox(
-                  value: true,
-                  onChanged: null,
-                  activeColor: const Color(0xFF1A237E),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+                const Icon(Icons.check_circle_outline, color: Color(0xFFC9A227), size: 24),
+                const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
                     'I confirm that all details provided are accurate and complete.',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF1A237E)),
+                    style: TextStyle(fontSize: 14, color: Color(0xFF1A2C3E), fontWeight: FontWeight.w500),
                   ),
+                ),
+                Checkbox(
+                  value: true,
+                  onChanged: null,
+                  activeColor: const Color(0xFFC9A227),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 80),
+          const SizedBox(height: 100),
         ],
       ),
     );
   }
 
-  // Enhanced _buildFormField with readOnly parameter
-  Widget _buildFormField({
+  // Premium Form Field
+  Widget _buildPremiumFormField({
     required String label,
     required TextEditingController controller,
     required String hint,
     int maxLines = 1,
     bool readOnly = false,
-    String? Function(String?)? validator,
+    bool isRequired = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1153,53 +1089,115 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A237E),
+                color: Color(0xFF1A2C3E),
+                letterSpacing: -0.2,
               ),
             ),
-            if (validator != null)
+            if (isRequired)
               const Text(
-                '*',
-                style: TextStyle(color: Colors.red, fontSize: 14),
+                ' *',
+                style: TextStyle(color: Color(0xFFEF4444), fontSize: 14),
               ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
           readOnly: readOnly,
-          validator: validator,
+          style: const TextStyle(fontSize: 15, color: Color(0xFF1A2C3E)),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.grey),
+            hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
             filled: true,
-            fillColor: Colors.grey[50],
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            fillColor: readOnly ? const Color(0xFFF8FAFD) : Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFC9A227), width: 1.5),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red),
+          ),
+          validator: isRequired
+              ? (value) => value == null || value.trim().isEmpty ? 'Required' : null
+              : null,
+        ),
+      ],
+    );
+  }
+
+  // Premium Dropdown
+  Widget _buildPremiumDropdown({
+    required String label,
+    required String value,
+    required List<String> items,
+    required void Function(String?)? onChanged,
+    bool isRequired = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A2C3E),
+                letterSpacing: -0.2,
+              ),
             ),
-            errorStyle: const TextStyle(fontSize: 12),
+            if (isRequired)
+              const Text(
+                ' *',
+                style: TextStyle(color: Color(0xFFEF4444), fontSize: 14),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value.isEmpty ? null : value,
+            isExpanded: true,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFFC9A227)),
+            style: const TextStyle(fontSize: 15, color: Color(0xFF1A2C3E), fontWeight: FontWeight.w500),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: InputBorder.none,
+              hintText: 'Select $label',
+              hintStyle: TextStyle(color: Colors.grey.shade500),
+            ),
+            onChanged: onChanged,
+            items: items.map((String item) {
+              return DropdownMenuItem<String>(
+                value: item,
+                child: Text(item),
+              );
+            }).toList(),
+            validator: isRequired
+                ? (value) => value == null || value.isEmpty ? 'Required' : null
+                : null,
           ),
         ),
       ],
     );
   }
 
-  // Enhanced _buildTextAreaField with readOnly
-  Widget _buildTextAreaField({
+  // Premium Text Area
+  Widget _buildPremiumTextArea({
     required String label,
     required TextEditingController controller,
     required String hint,
@@ -1213,32 +1211,34 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A237E),
+            color: Color(0xFF1A2C3E),
+            letterSpacing: -0.2,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           maxLines: 4,
           minLines: 3,
           readOnly: readOnly,
+          style: const TextStyle(fontSize: 15, color: Color(0xFF1A2C3E)),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.grey),
+            hintStyle: TextStyle(color: Colors.grey.shade500),
             filled: true,
-            fillColor: Colors.grey[50],
+            fillColor: readOnly ? const Color(0xFFF8FAFD) : Colors.white,
             contentPadding: const EdgeInsets.all(16),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFC9A227), width: 1.5),
             ),
           ),
         ),
@@ -1246,96 +1246,31 @@ class _LoanSchemeFormScreenState extends State<LoanSchemeFormScreen> {
     );
   }
 
-  // Enhanced _buildDropdownField with enabled parameter
-  Widget _buildDropdownField({
-    required String label,
-    required String value,
-    required List<String> items,
-    required void Function(String?)? onChanged,
-    bool enabled = true,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1A237E),
-              ),
-            ),
-            if (validator != null)
-              const Text(
-                '*',
-                style: TextStyle(color: Colors.red, fontSize: 14),
-              ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: DropdownButtonFormField<String>(
-            value: value.isEmpty ? null : value,
-            isExpanded: true,
-            icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: InputBorder.none,
-              hintText: 'Select $label',
-              hintStyle: const TextStyle(color: Colors.grey),
-            ),
-            validator: validator,
-            onChanged: enabled ? onChanged : null,
-            items: items.map((String item) {
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Text(item),
-              );
-            }).toList(),
-            disabledHint: Text(value.isEmpty ? 'Not selected' : value),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _buildPremiumSummaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
+          SizedBox(
+            width: 110,
             child: Text(
               '$label:',
               style: const TextStyle(
-                color: Colors.grey,
+                fontSize: 14,
+                color: Color(0xFF64748B),
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          const SizedBox(width: 16),
           Expanded(
-            flex: 3,
             child: Text(
               value.isEmpty ? 'Not specified' : value,
               style: const TextStyle(
-                color: Colors.black87,
+                fontSize: 14,
+                color: Color(0xFF1A2C3E),
                 fontWeight: FontWeight.w600,
+                letterSpacing: -0.2,
               ),
             ),
           ),

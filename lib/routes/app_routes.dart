@@ -4,8 +4,8 @@ import 'package:loanready_app/presentation/screens/splash/splash_screen.dart';
 import 'package:loanready_app/presentation/screens/home/home_screen.dart';
 
 import '../presentation/aboutus/aboutus_screen.dart';
-import '../presentation/screens/auth/OtpLoginScreen.dart';
-import '../presentation/screens/auth/VerifyOtpScreen.dart';
+import '../presentation/screens/auth/otp_login_screen.dart';
+import '../presentation/screens/auth/verify_otp_screen.dart';
 import '../presentation/screens/payment/confirm_payment_screen.dart';
 import '../presentation/screens/plan/choose_plan_screen.dart';
 import '../presentation/screens/register/business_details_screen.dart';

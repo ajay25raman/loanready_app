@@ -38,7 +38,6 @@ class OneYearTradingScreen extends StatefulWidget {
 class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
   final _formKey = GlobalKey<FormState>();
 
-
   final TextEditingController _salesController = TextEditingController();
   final TextEditingController _commissionController = TextEditingController();
   final TextEditingController _cashInHandController = TextEditingController();
@@ -47,9 +46,11 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
 
   bool _isLoading = false;
 
-
-  final Color _primary = const Color(0xFF1A237E);
-  final Color _background = const Color(0xFFF8FAFC);
+  // Premium color palette
+  final Color _primary = const Color(0xFF1A2C3E);   // deep slate
+  final Color _accent = const Color(0xFFC9A227);    // gold accent
+  final Color _backgroundStart = const Color(0xFFFFFFFF);
+  final Color _backgroundEnd = const Color(0xFFF0F4F8);
   final Color _cardColor = Colors.white;
   final Color _text = const Color(0xFF1E293B);
   final Color _hint = const Color(0xFF64748B);
@@ -62,7 +63,6 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
     setState(() => _isLoading = true);
 
     try {
-
       final Map<String, dynamic> requestBody = {
         'sales': double.tryParse(_salesController.text.replaceAll(',', '')) ?? 0,
         'commissionReceived': double.tryParse(_commissionController.text.replaceAll(',', '')) ?? 0,
@@ -70,8 +70,6 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
         'cashInBank': double.tryParse(_cashInBankController.text.replaceAll(',', '')) ?? 0,
         'landAndBuilding': double.tryParse(_landController.text.replaceAll(',', '')) ?? 0,
       };
-
-      print('API Request: $requestBody');
 
       final response = await http.post(
         Uri.parse(_apiUrl),
@@ -81,21 +79,21 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        print('API Response Received Successfully');
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OneYearResultScreen(resultData: data),
-          ),
-        );
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OneYearResultScreen(resultData: data),
+            ),
+          );
+        }
       } else {
         _showError("Server Error: ${response.statusCode}");
       }
     } catch (e) {
       _showError("Connection failed: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -103,9 +101,10 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -123,134 +122,162 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           "Financial Projection",
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 18,
-            color: Colors.white, // 👈 text white
+            letterSpacing: -0.3,
+            color: Colors.white,
           ),
         ),
         centerTitle: true,
-        backgroundColor: _primary, // 👈 0xFF1A237E
+        backgroundColor: _primary,
         foregroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-
-      body: Stack(
-        children: [
-          Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: _primary.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _primary.withOpacity(0.2)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.insights, color: _primary, size: 24),
-                            const SizedBox(width: 12),
-                            const Text(
-                              "3-Year Financial Projection",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Enter 5 key financial inputs to generate detailed 3-year projections",
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _hint,
-                            height: 1.4,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [_backgroundStart, _backgroundEnd],
+            stops: const [0.0, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: _cardColor,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _primary.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                            spreadRadius: -2,
                           ),
+                        ],
+                        border: Border.all(
+                          color: _accent.withOpacity(0.15),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [_accent.withOpacity(0.15), _accent.withOpacity(0.05)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Icon(Icons.insights, color: _accent, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "3-Year Financial Projection",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.3,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Enter 5 key inputs to generate detailed projections",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _hint,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Revenue Section
+                    _buildInputSection(
+                      title: "Revenue",
+                      icon: Icons.currency_rupee,
+                      children: [
+                        _buildInputField(
+                          label: "Total Sales",
+                          controller: _salesController,
+                          icon: Icons.shopping_cart,
+                          isRequired: true,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInputField(
+                          label: "Commission Received",
+                          controller: _commissionController,
+                          icon: Icons.request_page,
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 24),
 
-                  const SizedBox(height: 28),
-                  _buildInputSection(
-                    title: "Revenue",
-                    children: [
-                      _buildInputField(
-                        label: "Total Sales",
-                        controller: _salesController,
-                        icon: Icons.shopping_cart,
-                        isRequired: true,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        label: "Commission Received",
-                        controller: _commissionController,
-                        icon: Icons.request_page,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  _buildInputSection(
-                    title: "Assets",
-                    children: [
-                      _buildInputField(
-                        label: "Cash in Hand",
-                        controller: _cashInHandController,
-                        icon: Icons.wallet,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        label: "Cash in Bank",
-                        controller: _cashInBankController,
-                        icon: Icons.account_balance,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        label: "Land & Building",
-                        controller: _landController,
-                        icon: Icons.home_work,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
-                ],
+                    // Assets Section
+                    _buildInputSection(
+                      title: "Assets",
+                      icon: Icons.account_balance_wallet,
+                      children: [
+                        _buildInputField(
+                          label: "Cash in Hand",
+                          controller: _cashInHandController,
+                          icon: Icons.wallet,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInputField(
+                          label: "Cash in Bank",
+                          controller: _cashInBankController,
+                          icon: Icons.account_balance,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInputField(
+                          label: "Land & Building",
+                          controller: _landController,
+                          icon: Icons.home_work,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: _primary.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _fetchOneYearTrading,
                 style: ElevatedButton.styleFrom(
@@ -258,56 +285,84 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 0,
+                  shadowColor: _primary.withOpacity(0.3),
                 ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.analytics, size: 20),
-                      SizedBox(width: 10),
-                      Text(
-                        "Generate 3-Year Report",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  )
-              ),
-            ),
-          ),
-
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.2),
-              child: const Center(
-                child: Column(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
+                    Icon(_isLoading ? Icons.hourglass_empty : Icons.analytics, size: 20),
+                    const SizedBox(width: 12),
                     Text(
-                      "Generating financial projections...",
-                      style: TextStyle(
-                        color: Colors.white,
+                      _isLoading ? "Generating..." : "Generate 3-Year Report",
+                      style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-        ],
+            if (_isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.3),
+                child: Center(
+                  child: TweenAnimationBuilder(
+                    tween: Tween<double>(begin: 0.8, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    builder: (context, scale, child) {
+                      return Transform.scale(
+                        scale: scale,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          margin: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 30,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A2C3E)),
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                "Generating financial projections...",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildInputSection({
     required String title,
+    required IconData icon,
     required List<Widget> children,
   }) {
     return Column(
@@ -315,31 +370,37 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: _text,
-            ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: _accent),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: _text,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
           ),
         ),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: _cardColor,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: _primary.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+                spreadRadius: -2,
               ),
             ],
           ),
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -360,18 +421,15 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: _text,
+                letterSpacing: -0.2,
               ),
             ),
             if (isRequired)
               Text(
                 " *",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(color: Colors.red.shade600, fontSize: 14),
               ),
           ],
         ),
@@ -387,28 +445,32 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
           ),
           decoration: InputDecoration(
             hintText: "Enter amount",
-            hintStyle: TextStyle(color: _hint, fontSize: 14),
-            prefixIcon: Icon(icon, color: _primary, size: 20),
+            hintStyle: TextStyle(color: _hint.withOpacity(0.6), fontSize: 14),
+            prefixIcon: Icon(icon, color: _accent, size: 20),
             prefixText: '₹ ',
             prefixStyle: TextStyle(
               fontSize: 15,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: _primary,
             ),
             filled: true,
-            fillColor: _background,
+            fillColor: const Color(0xFFF8FAFD),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: _hint.withOpacity(0.2)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: _hint.withOpacity(0.2)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: _primary, width: 1.5),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: _accent, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.red.shade300, width: 1),
             ),
           ),
           validator: (value) {
@@ -426,4 +488,3 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
     );
   }
 }
-
