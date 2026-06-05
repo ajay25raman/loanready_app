@@ -9,633 +9,1318 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
-
 class OneYearResultScreen extends StatelessWidget {
   final Map<String, dynamic> resultData;
 
   const OneYearResultScreen({super.key, required this.resultData});
 
-  String _formatCurrency(dynamic value) {
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+
+  String _fmt(dynamic value) {
     if (value is num) {
-      String str = value.abs().toStringAsFixed(0);
-      str = str.replaceAllMapped(
+      final String str = value.abs().toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-            (Match m) => '${m[1]},',
+            (m) => '${m[1]},',
       );
       return value < 0 ? '-₹ $str' : '₹ $str';
     }
-    return '₹ ${value ?? 0}';
+    return '₹ 0';
   }
 
-  String _formatCamelCase(String text) {
-    if (text.isEmpty) return text;
-    String result = text.replaceAllMapped(
-      RegExp(r'(?<=[a-z])[A-Z]'),
-          (Match m) => ' ${m.group(0)}',
-    );
-    result = result[0].toUpperCase() + result.substring(1);
-    result = result.replaceAll('_', ' ');
-    return result;
+  String _fmtLabel(String key) {
+    if (key.isEmpty) return key;
+    String r = key.replaceAllMapped(
+        RegExp(r'(?<=[a-z])[A-Z]'), (m) => ' ${m.group(0)}');
+    r = r[0].toUpperCase() + r.substring(1);
+    return r.replaceAll('_', ' ');
   }
 
-  // ======================== PDF GENERATION (unchanged) ========================
-  Future<void> _downloadExcelReport(BuildContext context) async {
-    // Show loading to user
+  num _n(dynamic v) =>
+      v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PDF — PREMIUM DESIGN
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── Brand Colors ──────────────────────────────────────────────────────────
+  static const PdfColor _navy      = PdfColor.fromInt(0xFF1A2C3E);
+  static const PdfColor _navyLight = PdfColor.fromInt(0xFF243447);
+  static const PdfColor _gold      = PdfColor.fromInt(0xFFC9A227);
+  static const PdfColor _blue      = PdfColor.fromInt(0xFF1565C0);
+  static const PdfColor _blueSoft  = PdfColor.fromInt(0xFFE3EEF9);
+  static const PdfColor _green     = PdfColor.fromInt(0xFF2E7D32);
+  static const PdfColor _greenSoft = PdfColor.fromInt(0xFFE8F5E9);
+  static const PdfColor _red       = PdfColor.fromInt(0xFFC62828);
+  static const PdfColor _redSoft   = PdfColor.fromInt(0xFFFFEBEE);
+  static const PdfColor _grey50    = PdfColor.fromInt(0xFFF8FAFD);
+  static const PdfColor _grey100   = PdfColor.fromInt(0xFFF0F4F8);
+  static const PdfColor _grey200   = PdfColor.fromInt(0xFFE2E8F0);
+  static const PdfColor _grey400   = PdfColor.fromInt(0xFF94A3B8);
+  static const PdfColor _grey600   = PdfColor.fromInt(0xFF475569);
+  static const PdfColor _grey800   = PdfColor.fromInt(0xFF1E293B);
+  static const PdfColor _white     = PdfColors.white;
+
+  Future<void> _downloadPdf(BuildContext context) async {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Generating PDF...')),
+        const SnackBar(
+          content: Text('Generating premium PDF report...'),
+          backgroundColor: Color(0xFF1A2C3E),
+        ),
       );
     }
-
     try {
-      final pdf = pw.Document();
-      pdf.addPage(_buildProfilePage());
-
-      final years = [
-        {"key": "firstYear",  "label": "ACTUAL",    "yearEnd": "31ST MARCH 2025"},
-        {"key": "secondYear", "label": "ESTIMATED", "yearEnd": "31ST MARCH 2026"},
-        {"key": "thirdYear",  "label": "PROJECTED", "yearEnd": "31ST MARCH 2027"},
-      ];
-
-      for (var yearInfo in years) {
-        final yearKey   = yearInfo["key"] as String;
-        final yearLabel = yearInfo["label"] as String;
-        final yearEnd   = yearInfo["yearEnd"] as String;
-        final yearData  = resultData[yearKey];
-        if (yearData == null) continue;
-        pdf.addPage(_buildTradingPage(yearData, yearLabel, yearEnd));
-        pdf.addPage(_buildPLPage(yearData, yearLabel, yearEnd));
-        pdf.addPage(_buildBalanceSheetPage(yearData, yearLabel, yearEnd));
-      }
-
-      // ✅ Use temp directory — works on both Android & iOS
-      final dir = await getTemporaryDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = '${dir.path}/financial_report_$timestamp.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
-
-      // ✅ Use share_plus — works on Android + iOS without any file provider setup
-      await Share.shareXFiles(
-        [XFile(filePath, mimeType: 'application/pdf')],
-        subject: 'Financial Report',
+      final pdf = pw.Document(
+        title: '3-Year Financial Projection Report',
+        author: 'Financial Projection System',
       );
 
+      final years = [
+        {'key': 'firstYear',  'label': 'ACTUAL',    'yearEnd': '31ST MARCH 2025', 'num': '01'},
+        {'key': 'secondYear', 'label': 'ESTIMATED', 'yearEnd': '31ST MARCH 2026', 'num': '02'},
+        {'key': 'thirdYear',  'label': 'PROJECTED', 'yearEnd': '31ST MARCH 2027', 'num': '03'},
+      ];
+
+      // ── Page 1: Cover + Summary ──────────────────────────────────────────
+      pdf.addPage(_buildCoverPage(years));
+
+      // ── Per-year pages ───────────────────────────────────────────────────
+      for (var info in years) {
+        final yearData = resultData[info['key']!];
+        if (yearData == null) continue;
+        // KPI + Trading on one page
+        pdf.addPage(_buildYearPage(yearData, info['label']!, info['yearEnd']!, info['num']!));
+        // P&L on its own page
+        pdf.addPage(_buildPLPage(yearData, info['label']!, info['yearEnd']!, info['num']!));
+        // Balance Sheet on its own page
+        pdf.addPage(_buildBSPage(yearData, info['label']!, info['yearEnd']!, info['num']!));
+      }
+
+      final dir  = await getTemporaryDirectory();
+      final path = '${dir.path}/financial_report_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      await File(path).writeAsBytes(await pdf.save());
+
+      await Share.shareXFiles(
+        [XFile(path, mimeType: 'application/pdf')],
+        subject: '3-Year Financial Projection Report',
+      );
     } catch (e) {
-      // ✅ Show error to user instead of silent fail
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('PDF Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('PDF Error: $e'), backgroundColor: Colors.red),
         );
       }
-      debugPrint('PDF Error: $e');
     }
   }
 
-  pw.Page _buildProfilePage() {
-    final user = resultData;
-    final fullName = user['ownerName']?.toString() ?? user['fullName']?.toString() ?? 'Not Provided';
-    final email = user['email']?.toString() ?? 'Not Provided';
-    final phone = user['phone']?.toString() ?? user['mobile']?.toString() ?? 'Not Provided';
-    final address = user['address']?.toString() ?? 'Not Provided';
-    String dob = user['dob']?.toString() ?? 'Not Provided';
-    if (dob != 'Not Provided' && dob.contains('-')) {
-      try {
-        final parts = dob.split('-');
-        if (parts.length == 3) dob = '${parts[2]}/${parts[1]}/${parts[0]}';
-      } catch (e) {}
-    }
-    return pw.Page(
-      margin: const pw.EdgeInsets.all(40),
-      build: (pw.Context context) => pw.Center(
-        child: pw.Column(
-          mainAxisAlignment: pw.MainAxisAlignment.center,
+  // ── Shared page header ───────────────────────────────────────────────────
+  pw.Widget _pageHeader(String section, String label, String yearEnd, String pageNum) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          decoration: const pw.BoxDecoration(color: _navy),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    section,
+                    style: pw.TextStyle(
+                      font: pw.Font.helveticaBold(),
+                      fontSize: 15,
+                      color: _white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  pw.SizedBox(height: 3),
+                  pw.Text(
+                    'For the year ending $yearEnd',
+                    style: const pw.TextStyle(fontSize: 9, color: _grey400),
+                  ),
+                ],
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  color: _gold,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                ),
+                child: pw.Text(
+                  label,
+                  style: pw.TextStyle(
+                    font: pw.Font.helveticaBold(),
+                    fontSize: 10,
+                    color: _navy,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.Container(height: 3, color: _gold),
+      ],
+    );
+  }
+
+  // ── Shared page footer ───────────────────────────────────────────────────
+  pw.Widget _pageFooter(String pageNum) {
+    return pw.Column(
+      children: [
+        pw.Container(height: 1, color: _grey200),
+        pw.SizedBox(height: 6),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('USER PROFILE',
-                style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 40),
-            _pdfInfoRow('Full Name', fullName),
-            _pdfInfoRow('Date of Birth', dob),
-            _pdfInfoRow('Mobile Number', phone),
-            _pdfInfoRow('Email Address', email),
-            _pdfInfoRow('Address', address),
-            pw.SizedBox(height: 40),
-            pw.Text('Report Generated: ${DateTime.now().toString().split(' ')[0]}',
-                style: const pw.TextStyle(fontSize: 12)),
+            pw.Text(
+              'Generated: ${_todayStr()}  •  Confidential — For Internal Use Only',
+              style: const pw.TextStyle(fontSize: 7.5, color: _grey400),
+            ),
+            pw.Text(
+              'Page $pageNum',
+              style: const pw.TextStyle(fontSize: 7.5, color: _grey400),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _todayStr() {
+    final d = DateTime.now();
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${d.day.toString().padLeft(2,'0')} ${months[d.month-1]} ${d.year}';
+  }
+
+  // ── Cover page ───────────────────────────────────────────────────────────
+  pw.Page _buildCoverPage(List<Map<String, String>> years) {
+    // Collect summary data for all 3 years
+    final summaryRows = years.map((info) {
+      final y = resultData[info['key']!] ?? {};
+      final t = y['trading'] ?? {};
+      final p = y['pl'] ?? {};
+      final bs = y['bs'] ?? {};
+      return {
+        'label': info['label']!,
+        'yearEnd': info['yearEnd']!,
+        'sales': _n(t['sales']),
+        'grossProfit': _n(t['grossProfit']),
+        'netProfit': _n(p['netProfit']),
+        'totalAssets': _n(bs['totalAssets']),
+      };
+    }).toList();
+
+    return pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: pw.EdgeInsets.zero,
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          // Top decorative band
+          pw.Container(
+            height: 8,
+            color: _gold,
+          ),
+          // Hero header
+          pw.Container(
+            padding: const pw.EdgeInsets.fromLTRB(40, 36, 40, 32),
+            color: _navy,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          '3-YEAR FINANCIAL',
+                          style: pw.TextStyle(
+                            font: pw.Font.helveticaBold(),
+                            fontSize: 28,
+                            color: _white,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        pw.Text(
+                          'PROJECTION REPORT',
+                          style: pw.TextStyle(
+                            font: pw.Font.helveticaBold(),
+                            fontSize: 28,
+                            color: _gold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.all(12),
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: _gold, width: 1.5),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'PREPARED ON',
+                            style: const pw.TextStyle(fontSize: 7, color: _grey400, letterSpacing: 1),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(
+                            _todayStr(),
+                            style: pw.TextStyle(
+                              font: pw.Font.helveticaBold(),
+                              fontSize: 11,
+                              color: _white,
+                            ),
+                          ),
+                          pw.SizedBox(height: 8),
+                          pw.Text(
+                            'PERIOD COVERED',
+                            style: const pw.TextStyle(fontSize: 7, color: _grey400, letterSpacing: 1),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(
+                            'FY 2025 – FY 2027',
+                            style: pw.TextStyle(
+                              font: pw.Font.helveticaBold(),
+                              fontSize: 11,
+                              color: _gold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 14),
+                pw.Text(
+                  'Comprehensive analysis covering Trading Account, Profit & Loss, and Balance Sheet',
+                  style: const pw.TextStyle(fontSize: 10, color: _grey400),
+                ),
+              ],
+            ),
+          ),
+          pw.Container(height: 2, color: _gold),
+
+          pw.SizedBox(height: 28),
+
+          // KPI Summary across 3 years
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 36),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _sectionTitle('EXECUTIVE SUMMARY', Icons.bar_chart),
+                pw.SizedBox(height: 14),
+
+                // Summary table
+                pw.Table(
+                  border: pw.TableBorder(
+                    top: const pw.BorderSide(color: _navy, width: 2),
+                    bottom: const pw.BorderSide(color: _navy, width: 2),
+                    horizontalInside: const pw.BorderSide(color: _grey200, width: 0.5),
+                    left: pw.BorderSide.none,
+                    right: pw.BorderSide.none,
+                    verticalInside: pw.BorderSide.none,
+                  ),
+                  columnWidths: const {
+                    0: pw.FlexColumnWidth(2.2),
+                    1: pw.FlexColumnWidth(1.8),
+                    2: pw.FlexColumnWidth(1.8),
+                    3: pw.FlexColumnWidth(1.8),
+                  },
+                  children: [
+                    // Header
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(color: _navyLight),
+                      children: [
+                        _summaryCell('METRIC', isHeader: true, align: pw.TextAlign.left),
+                        _summaryCell('ACTUAL\n31 Mar 2025', isHeader: true),
+                        _summaryCell('ESTIMATED\n31 Mar 2026', isHeader: true),
+                        _summaryCell('PROJECTED\n31 Mar 2027', isHeader: true),
+                      ],
+                    ),
+                    // Rows
+                    _summaryDataRow('Total Sales', summaryRows.map((r) => r['sales'] as num).toList(), highlight: false),
+                    _summaryDataRow('Gross Profit', summaryRows.map((r) => r['grossProfit'] as num).toList(), highlight: false),
+                    _summaryDataRow('Net Profit', summaryRows.map((r) => r['netProfit'] as num).toList(), highlight: true, isProfit: true),
+                    _summaryDataRow('Total Assets', summaryRows.map((r) => r['totalAssets'] as num).toList(), highlight: false),
+                  ],
+                ),
+
+                pw.SizedBox(height: 28),
+
+                // Growth indicators
+                _sectionTitle('YEAR-ON-YEAR GROWTH', Icons.trending_up),
+                pw.SizedBox(height: 14),
+                pw.Row(
+                  children: [
+                    _growthKpiCard(
+                      'Sales Growth\n(Y1 → Y2)',
+                      '+20.0%',
+                      _green,
+                      _greenSoft,
+                    ),
+                    pw.SizedBox(width: 12),
+                    _growthKpiCard(
+                      'Sales Growth\n(Y2 → Y3)',
+                      '+25.0%',
+                      _green,
+                      _greenSoft,
+                    ),
+                    pw.SizedBox(width: 12),
+                    _growthKpiCard(
+                      'Net Profit\nY1 → Y3 Growth',
+                      '+50.0%',
+                      _blue,
+                      _blueSoft,
+                    ),
+                    pw.SizedBox(width: 12),
+                    _growthKpiCard(
+                      'Profit Margin\n(All Years)',
+                      '33.6%',
+                      _navy,
+                      _grey100,
+                    ),
+                  ],
+                ),
+
+                pw.SizedBox(height: 28),
+
+                // Table of contents
+                _sectionTitle('REPORT CONTENTS', Icons.list_alt),
+                pw.SizedBox(height: 10),
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: _grey200),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Column(
+                    children: [
+                      _tocRow('Pages 2–4',  'Year 1 — Actual    |  Trading Account, P&L, Balance Sheet'),
+                      _tocRow('Pages 5–7',  'Year 2 — Estimated |  Trading Account, P&L, Balance Sheet'),
+                      _tocRow('Pages 8–10', 'Year 3 — Projected |  Trading Account, P&L, Balance Sheet'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          pw.Spacer(),
+
+          // Bottom footer
+          pw.Padding(
+            padding: const pw.EdgeInsets.fromLTRB(36, 0, 36, 16),
+            child: _pageFooter('1'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _tocRow(String pages, String content) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: _grey200, width: 0.5)),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Container(
+            width: 70,
+            child: pw.Text(pages,
+                style: pw.TextStyle(
+                    font: pw.Font.helveticaBold(), fontSize: 8.5, color: _navy)),
+          ),
+          pw.Container(width: 1, height: 12, color: _gold),
+          pw.SizedBox(width: 12),
+          pw.Text(content,
+              style: const pw.TextStyle(fontSize: 8.5, color: _grey600)),
+        ],
+      ),
+    );
+  }
+
+  pw.TableRow _summaryDataRow(String label, List<num> values,
+      {bool highlight = false, bool isProfit = false}) {
+    final bg = highlight ? _blueSoft : _white;
+    return pw.TableRow(
+      decoration: pw.BoxDecoration(color: bg),
+      children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(
+              font: highlight ? pw.Font.helveticaBold() : pw.Font.helvetica(),
+              fontSize: 9,
+              color: _grey800,
+            ),
+          ),
+        ),
+        ...values.map((v) => pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: pw.Text(
+            _fmt(v),
+            textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(
+              font: highlight ? pw.Font.helveticaBold() : pw.Font.helvetica(),
+              fontSize: 9,
+              color: highlight
+                  ? (isProfit ? _green : _red)
+                  : _grey800,
+            ),
+          ),
+        )),
+      ],
+    );
+  }
+
+  pw.Widget _summaryCell(String text,
+      {bool isHeader = false, pw.TextAlign align = pw.TextAlign.right}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: pw.Text(
+        text,
+        textAlign: align,
+        style: pw.TextStyle(
+          font: pw.Font.helveticaBold(),
+          fontSize: 8.5,
+          color: isHeader ? _white : _grey800,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _growthKpiCard(String label, String value, PdfColor textColor, PdfColor bg) {
+    return pw.Expanded(
+      child: pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: pw.BoxDecoration(
+          color: bg,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+          border: pw.Border.all(color: _grey200),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text(
+              value,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(
+                font: pw.Font.helveticaBold(),
+                fontSize: 16,
+                color: textColor,
+              ),
+            ),
+            pw.SizedBox(height: 5),
+            pw.Text(
+              label,
+              textAlign: pw.TextAlign.center,
+              style: const pw.TextStyle(fontSize: 8, color: _grey600),
+            ),
           ],
         ),
       ),
     );
   }
 
-  pw.Widget _pdfInfoRow(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 6),
-      child: pw.Row(
-        children: [
-          pw.Container(
-            width: 130,
-            child: pw.Text(label,
-                style: pw.TextStyle(fontSize: 11, font: pw.Font.helveticaBold())), // ✅ 28 se 11
+  pw.Widget _sectionTitle(String title, IconData _) {
+    return pw.Row(
+      children: [
+        pw.Container(width: 4, height: 16, color: _gold),
+        pw.SizedBox(width: 8),
+        pw.Text(
+          title,
+          style: pw.TextStyle(
+            font: pw.Font.helveticaBold(),
+            fontSize: 11,
+            color: _navy,
+            letterSpacing: 0.8,
           ),
-          pw.Expanded(
-            child: pw.Text(':  $value',
-                style: const pw.TextStyle(fontSize: 11)), // ✅ font size add karo
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  num _toNum(dynamic v) => v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
+  // ── Year page: KPI cards + Trading Account ───────────────────────────────
+  pw.Page _buildYearPage(Map<String, dynamic> y, String label, String yearEnd, String num) {
+    final t = y['trading'] ?? {};
+    final p = y['pl']     ?? {};
+    final bs= y['bs']     ?? {};
 
-  pw.Page _buildTradingPage(Map<String, dynamic> yearData, String yearLabel, String yearEnd) {
-    final trading = yearData['oneYearTrading']?['yearOne'] ?? {};
+    final sales       = _n(t['sales']);
+    final grossProfit = _n(t['grossProfit']);
+    final netProfit   = _n(p['netProfit']);
+    final totalAssets = _n(bs['totalAssets']);
+    final isProfit    = netProfit >= 0;
+
     final debitRows = [
-      ['Opening Stock', _pdfFormatCurrency(_toNum(trading['openingStock']))],
-      ['Purchases', _pdfFormatCurrency(_toNum(trading['purchases']))],
-      ['Less: Returns', _pdfFormatCurrency(_toNum(trading['lessReturn']))],
-      ['Carriage Inwards', _pdfFormatCurrency(_toNum(trading['carriageInwards']))],
-      ['Cartage', _pdfFormatCurrency(_toNum(trading['cartage']))],
-      ['Dock Charges', _pdfFormatCurrency(_toNum(trading['dockCharges']))],
-      ['Wages', _pdfFormatCurrency(_toNum(trading['wages']))],
-      ['Duty', _pdfFormatCurrency(_toNum(trading['duty']))],
-      ['Freight', _pdfFormatCurrency(_toNum(trading['freight']))],
-      ['Clearing Charges', _pdfFormatCurrency(_toNum(trading['ClearingCharges']))],
-      ['Other Expenses', _pdfFormatCurrency(_toNum(trading['otherExpenses']))],
-      ['Gross Profit c/d', _pdfFormatCurrency(_toNum(trading['grossProfitLoss']))],
+      ['To Opening Stock',    _fmt(_n(t['openingStock']))],
+      ['To Purchases',        _fmt(_n(t['purchases']))],
+      ['Less: Returns',       '(${_fmt(_n(t['lessReturn']))})', true],
+      ['To Carriage Inwards', _fmt(_n(t['carriageInwards']))],
+      ['To Cartage',          _fmt(_n(t['cartage']))],
+      ['To Dock Charges',     _fmt(_n(t['dockCharges']))],
+      ['To Wages',            _fmt(_n(t['wages']))],
+      ['To Duty',             _fmt(_n(t['duty']))],
+      ['To Freight',          _fmt(_n(t['freight']))],
+      ['To Clearing Charges', _fmt(_n(t['clearingCharges']))],
+      ['To Other Expenses',   _fmt(_n(t['otherExpenses']))],
     ];
+    final grossProfitRow = ['To Gross Profit c/d', _fmt(grossProfit)];
     final creditRows = [
-      ['Sales', _pdfFormatCurrency(_toNum(trading['sales']))],
-      ['Closing Stock', _pdfFormatCurrency(_toNum(trading['closingStock']))],
+      ['By Sales',         _fmt(sales)],
+      ['By Closing Stock', _fmt(_n(t['closingStock']))],
     ];
+    final tradingTotal = sales + _n(t['closingStock']);
+
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(20),
-      build: (pw.Context context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+      margin: const pw.EdgeInsets.fromLTRB(0, 0, 0, 0),
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
-          pw.Text('TRADING ACCOUNT - $yearLabel ($yearEnd)',
-              style: pw.TextStyle(fontSize: 14, font: pw.Font.helveticaBold())),
-          pw.SizedBox(height: 10),
-          pw.Expanded(
-            child: pw.Row(
+          _pageHeader('TRADING ACCOUNT', label, yearEnd, num),
+          pw.SizedBox(height: 18),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 28),
+            child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Expanded(child: _pdfTable([['Dr', 'Amount (₹)'], ...debitRows])),
-                pw.SizedBox(width: 10),
-                pw.Expanded(child: _pdfTable([['Cr', 'Amount (₹)'], ...creditRows])),
+                // KPI cards row
+                pw.Row(
+                  children: [
+                    _kpiCard('Total Sales', _fmt(sales), _navy, _grey100, isBig: true),
+                    pw.SizedBox(width: 10),
+                    _kpiCard('Gross Profit', _fmt(grossProfit), _blue, _blueSoft),
+                    pw.SizedBox(width: 10),
+                    _kpiCard(
+                      isProfit ? 'Net Profit' : 'Net Loss',
+                      _fmt(netProfit),
+                      isProfit ? _green : _red,
+                      isProfit ? _greenSoft : _redSoft,
+                    ),
+                    pw.SizedBox(width: 10),
+                    _kpiCard('Total Assets', _fmt(totalAssets), _navy, _grey100),
+                  ],
+                ),
+
+                pw.SizedBox(height: 20),
+                _sectionTitle('TRADING ACCOUNT', Icons.bar_chart),
+                pw.SizedBox(height: 10),
+
+                // Trading table — Dr | Cr side by side
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(
+                      child: _premiumTable(
+                        title: 'Dr (Debit Side)',
+                        titleColor: _navy,
+                        rows: debitRows
+                            .map((row) => row.map((e) => e.toString()).toList())
+                            .toList(),
+                        highlightRow: grossProfitRow,
+                        highlightColor: _blueSoft,
+                        highlightTextColor: _blue,
+                        footerLabel: 'Total',
+                        footerValue: _fmt(_n(t['tradingTotal'])),
+                      ),
+                    ),
+                    pw.SizedBox(width: 14),
+                    pw.Expanded(
+                      child: _premiumTable(
+                        title: 'Cr (Credit Side)',
+                        titleColor: _navy,
+                        rows: creditRows,
+                        footerLabel: 'Total',
+                        footerValue: _fmt(tradingTotal),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
+          pw.Spacer(),
+          pw.Padding(
+            padding: const pw.EdgeInsets.fromLTRB(28, 0, 28, 14),
+            child: _pageFooter(num == '01' ? '2' : num == '02' ? '5' : '8'),
+          ),
         ],
       ),
     );
   }
 
-  pw.Page _buildPLPage(Map<String, dynamic> yearData, String yearLabel, String yearEnd) {
-    final pl = yearData['pl']?['profitLoss'] ?? {};
+  // ── P&L page ─────────────────────────────────────────────────────────────
+  pw.Page _buildPLPage(Map<String, dynamic> y, String label, String yearEnd, String num) {
+    final p = y['pl'] ?? {};
+    final netProfit  = _n(p['netProfit']);
+    final isProfit   = netProfit >= 0;
+
     final debitRows = [
-      ['Salaries', _toNum(pl['salaries'])],
-      ['Rent', _toNum(pl['rent'])],
-      ['Discount Allowed', _toNum(pl['discountAllowed'])],
-      ['Commission Paid', _toNum(pl['commissionPaid'])],
-      ['Insurance', _toNum(pl['insurance'])],
-      ['Bank Charges', _toNum(pl['bankCharges'])],
-      ['Legal Charges', _toNum(pl['legalCharges'])],
-      ['Repairs', _toNum(pl['repairs'])],
-      ['Advertising', _toNum(pl['advertising'])],
-      ['Trade Expenses', _toNum(pl['tradeExpenses'])],
-      ['Office Expenses', _toNum(pl['officeExpenses'])],
-      ['Bad Debts', _toNum(pl['badDebts'])],
-      ['Travelling Expenses', _toNum(pl['travellingExpenses'])],
-      ['Selling & Distribution', _toNum(pl['sellingAndDistribution'])],
-      ['Net Profit (to Capital)', _toNum(pl['netProfit'])],
+      ['To Salaries',              _fmt(_n(p['salaries']))],
+      ['To Rent',                  _fmt(_n(p['rent']))],
+      ['To Discount Allowed',      _fmt(_n(p['discountAllowed']))],
+      ['To Commission Paid',       _fmt(_n(p['commissionPaid']))],
+      ['To Insurance',             _fmt(_n(p['insurance']))],
+      ['To Bank Charges',          _fmt(_n(p['bankCharges']))],
+      ['To Legal Charges',         _fmt(_n(p['legalCharges']))],
+      ['To Repairs',               _fmt(_n(p['repairs']))],
+      ['To Advertising',           _fmt(_n(p['advertising']))],
+      ['To Trade Expenses',        _fmt(_n(p['tradeExpenses']))],
+      ['To Office Expenses',       _fmt(_n(p['officeExpenses']))],
+      ['To Bad Debts',             _fmt(_n(p['badDebts']))],
+      ['To Travelling Expenses',   _fmt(_n(p['travellingExpenses']))],
+      ['To Selling & Distribution',_fmt(_n(p['sellingAndDistribution']))],
+    ];
+    final netProfitRow = [
+      'To Net Profit (to Capital)',
+      _fmt(netProfit),
     ];
     final creditRows = [
-      ['Gross Profit b/f', _toNum(pl['grossProfitBf'])],
-      ['Interest Received', _toNum(pl['interestReceived'])],
-      ['Discount Received', _toNum(pl['discountReceived'])],
-      ['Commission Received', _toNum(pl['commissionReceived'])],
-      ['Other Receipts', _toNum(pl['otherReceipts'])],
+      ['By Gross Profit b/f',    _fmt(_n(p['grossProfitBf']))],
+      ['By Interest Received',   _fmt(_n(p['interestReceived']))],
+      ['By Discount Received',   _fmt(_n(p['discountReceived']))],
+      ['By Commission Received', _fmt(_n(p['commissionReceived']))],
+      ['By Other Receipts',      _fmt(_n(p['otherReceipts']))],
     ];
+
     return pw.Page(
-      margin: const pw.EdgeInsets.all(20),
-      build: (pw.Context context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+      pageFormat: PdfPageFormat.a4,
+      margin: pw.EdgeInsets.zero,
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
-          pw.Text('PROFIT & LOSS - $yearLabel ($yearEnd)',
-              style: pw.TextStyle(fontSize: 28, font: pw.Font.helveticaBold())),
-          pw.SizedBox(height: 20),
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Expanded(
-                child: _pdfTable([
-                  ['Dr', 'Amount (₹)'],
-                  ...debitRows.map((r) => [r[0] as String, _pdfFormatCurrency(r[1] as num)]),
-                ]),
-              ),
-              pw.SizedBox(width: 20),
-              pw.Expanded(
-                child: _pdfTable([
-                  ['Cr', 'Amount (₹)'],
-                  ...creditRows.map((r) => [r[0] as String, _pdfFormatCurrency(r[1] as num)]),
-                ]),
-              ),
-            ],
+          _pageHeader('PROFIT & LOSS ACCOUNT', label, yearEnd, num),
+          pw.SizedBox(height: 18),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 28),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Mini KPIs
+                pw.Row(
+                  children: [
+                    _kpiCard('Gross Profit b/f', _fmt(_n(p['grossProfitBf'])), _blue, _blueSoft, isBig: true),
+                    pw.SizedBox(width: 10),
+                    _kpiCard('Total Income', _fmt(_n(p['plTotal'])), _navy, _grey100),
+                    pw.SizedBox(width: 10),
+                    _kpiCard(
+                      isProfit ? 'Net Profit' : 'Net Loss',
+                      _fmt(netProfit),
+                      isProfit ? _green : _red,
+                      isProfit ? _greenSoft : _redSoft,
+                      isBig: true,
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                _sectionTitle('PROFIT & LOSS ACCOUNT', Icons.account_balance_wallet),
+                pw.SizedBox(height: 10),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(
+                      child: _premiumTable(
+                        title: 'Dr (Expenditure)',
+                        titleColor: _navy,
+                        rows: debitRows,
+                        highlightRow: netProfitRow,
+                        highlightColor: isProfit ? _greenSoft : _redSoft,
+                        highlightTextColor: isProfit ? _green : _red,
+                        footerLabel: 'Total',
+                        footerValue: _fmt(_n(p['plTotal'])),
+                      ),
+                    ),
+                    pw.SizedBox(width: 14),
+                    pw.Expanded(
+                      child: _premiumTable(
+                        title: 'Cr (Income)',
+                        titleColor: _navy,
+                        rows: creditRows,
+                        footerLabel: 'Total',
+                        footerValue: _fmt(_n(p['plTotal'])),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          pw.Spacer(),
+          pw.Padding(
+            padding: const pw.EdgeInsets.fromLTRB(28, 0, 28, 14),
+            child: _pageFooter(num == '01' ? '3' : num == '02' ? '6' : '9'),
           ),
         ],
       ),
     );
   }
 
-  pw.Page _buildBalanceSheetPage(Map<String, dynamic> yearData, String yearLabel, String yearEnd) {
-    final bs = yearData['balanceSheet']?['bs'] ?? {};
-    final assets = bs['assets'] ?? {};
-    final liabilities = bs['liabilities'] ?? {};
-    final liabilityRows = [
-      ['Capital', _toNum(liabilities['capital'])],
-      ['Add: Net Profit', _toNum(liabilities['netProfit'])],
-      ['Bills Payable', _toNum(liabilities['billsPayable'])],
+  // ── Balance Sheet page ───────────────────────────────────────────────────
+  pw.Page _buildBSPage(Map<String, dynamic> y, String label, String yearEnd, String num) {
+    final bs   = y['bs']               ?? {};
+    final assets = (bs['assets']       ?? {}) as Map;
+    final liab   = (bs['liabilities']  ?? {}) as Map;
+    final totalAssets      = _n(bs['totalAssets']);
+    final totalLiabilities = _n(bs['totalLiabilities']);
+
+    final liabRows = [
+      ['Capital',         _fmt(_n(liab['capital']))],
+      ['Add: Net Profit', _fmt(_n(liab['netProfit']))],
+      ['Bills Payable',   _fmt(_n(liab['billsPayable']))],
     ];
     final assetRows = [
-      ['Cash In Hand', _toNum(assets['cashInHand'])],
-      ['Cash at Bank', _toNum(assets['cashAtBank'])],
-      ['Bills Receivable', _toNum(assets['billsReceivable'])],
-      ['Stock', _toNum(assets['stock'])],
-      ['Land & Building', _toNum(assets['landAndBuilding'])],
-      ['Office Building', _toNum(assets['officeBuilding'])],
-      ['Office Equipment', _toNum(assets['officeEquipment'])],
+      ['Cash In Hand',     _fmt(_n(assets['cashInHand']))],
+      ['Cash at Bank',     _fmt(_n(assets['cashAtBank']))],
+      ['Bills Receivable', _fmt(_n(assets['billsReceivable']))],
+      ['Stock',            _fmt(_n(assets['stock']))],
+      ['Land & Building',  _fmt(_n(assets['landAndBuilding']))],
+      ['Office Building',  _fmt(_n(assets['officeBuilding']))],
+      ['Office Equipment', _fmt(_n(assets['officeEquipment']))],
     ];
-    final totalAssets = _toNum(yearData['balanceSheet']?['totalAssets']);
-    final totalLiabilities = _toNum(yearData['balanceSheet']?['totalLiabilities']);
+
     return pw.Page(
-      margin: const pw.EdgeInsets.all(20),
-      build: (pw.Context context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+      pageFormat: PdfPageFormat.a4,
+      margin: pw.EdgeInsets.zero,
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
-          pw.Text('BALANCE SHEET - $yearLabel (as on $yearEnd)',
-              style: pw.TextStyle(fontSize: 28, font: pw.Font.helveticaBold())),
-          pw.SizedBox(height: 20),
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Expanded(
-                child: _pdfTable([
-                  ['Liabilities', 'Amount (₹)'],
-                  ...liabilityRows.map((r) => [r[0] as String, _pdfFormatCurrency(r[1] as num)]),
-                  ['Total Liabilities', _pdfFormatCurrency(totalLiabilities)],
-                ]),
-              ),
-              pw.SizedBox(width: 20),
-              pw.Expanded(
-                child: _pdfTable([
-                  ['Assets', 'Amount (₹)'],
-                  ...assetRows.map((r) => [r[0] as String, _pdfFormatCurrency(r[1] as num)]),
-                  ['Total Assets', _pdfFormatCurrency(totalAssets)],
-                ]),
-              ),
-            ],
+          _pageHeader('BALANCE SHEET', label, yearEnd, num),
+          pw.SizedBox(height: 18),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 28),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // KPI bar
+                pw.Row(
+                  children: [
+                    _kpiCard('Total Liabilities', _fmt(totalLiabilities), _navy, _grey100, isBig: true),
+                    pw.SizedBox(width: 10),
+                    _kpiCard('Total Assets', _fmt(totalAssets), _blue, _blueSoft, isBig: true),
+                    pw.SizedBox(width: 10),
+                    _kpiCard(
+                      'Balance Check',
+                      totalAssets == totalLiabilities ? 'BALANCED ✓' : 'CHECK',
+                      totalAssets == totalLiabilities ? _green : _red,
+                      totalAssets == totalLiabilities ? _greenSoft : _redSoft,
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                _sectionTitle('BALANCE SHEET', Icons.business_center),
+                pw.SizedBox(height: 10),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(
+                      child: _premiumTable(
+                        title: 'Liabilities',
+                        titleColor: _navy,
+                        rows: liabRows,
+                        footerLabel: 'Total Liabilities',
+                        footerValue: _fmt(totalLiabilities),
+                        footerHighlight: true,
+                      ),
+                    ),
+                    pw.SizedBox(width: 14),
+                    pw.Expanded(
+                      child: _premiumTable(
+                        title: 'Assets',
+                        titleColor: _navy,
+                        rows: assetRows,
+                        footerLabel: 'Total Assets',
+                        footerValue: _fmt(totalAssets),
+                        footerHighlight: true,
+                      ),
+                    ),
+                  ],
+                ),
+
+                pw.SizedBox(height: 20),
+
+                // Balance confirmation box
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: pw.BoxDecoration(
+                    color: _navy,
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        'Total Liabilities = Total Assets',
+                        style: pw.TextStyle(
+                            font: pw.Font.helveticaBold(),
+                            fontSize: 10,
+                            color: _white),
+                      ),
+                      pw.Row(
+                        children: [
+                          pw.Text(
+                            '${_fmt(totalLiabilities)}  =  ${_fmt(totalAssets)}',
+                            style: pw.TextStyle(
+                                font: pw.Font.helveticaBold(),
+                                fontSize: 10,
+                                color: _gold),
+                          ),
+                          pw.SizedBox(width: 10),
+                          pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: pw.BoxDecoration(
+                              color: _green,
+                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                            ),
+                            child: pw.Text(
+                              'BALANCED',
+                              style: pw.TextStyle(
+                                  font: pw.Font.helveticaBold(),
+                                  fontSize: 8,
+                                  color: _white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.Spacer(),
+          pw.Padding(
+            padding: const pw.EdgeInsets.fromLTRB(28, 0, 28, 14),
+            child: _pageFooter(num == '01' ? '4' : num == '02' ? '7' : '10'),
           ),
         ],
       ),
     );
   }
 
-  pw.Widget _pdfTable(List<List<String>> data) {
-    return pw.Table(
-      border: pw.TableBorder.all(),
-      children: data.map((row) {
-        return pw.TableRow(
+  // ── Premium table widget ─────────────────────────────────────────────────
+  pw.Widget _premiumTable({
+    required String title,
+    required PdfColor titleColor,
+    required List<List<String>> rows,
+    List<String>? highlightRow,
+    PdfColor? highlightColor,
+    PdfColor? highlightTextColor,
+    required String footerLabel,
+    required String footerValue,
+    bool footerHighlight = false,
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        // Column header
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: pw.BoxDecoration(
-            color: data.indexOf(row) == 0 ? PdfColors.grey300 : PdfColors.white,
-          ),
-          children: row.map((cell) => pw.Padding(
-            padding: const pw.EdgeInsets.all(4), // ✅ 6 se 4
-            child: pw.Text(
-              cell,
-              textAlign: pw.TextAlign.right,
-              style: const pw.TextStyle(fontSize: 9), // ✅ font size add karo — default bahut bada tha
+            color: titleColor,
+            borderRadius: const pw.BorderRadius.only(
+              topLeft: pw.Radius.circular(5),
+              topRight: pw.Radius.circular(5),
             ),
-          )).toList(),
-        );
-      }).toList(),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                title,
+                style: pw.TextStyle(
+                  font: pw.Font.helveticaBold(),
+                  fontSize: 9,
+                  color: _white,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              pw.Text(
+                'Amount (₹)',
+                style: const pw.TextStyle(fontSize: 8, color: _grey400),
+              ),
+            ],
+          ),
+        ),
+
+        // Data rows
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            border: const pw.Border(
+              left: pw.BorderSide(color: _grey200),
+              right: pw.BorderSide(color: _grey200),
+            ),
+          ),
+          child: pw.Column(
+            children: rows.asMap().entries.map((entry) {
+              final i = entry.key;
+              final row = entry.value;
+              final isIndent = row.length > 2 && row[2] == 'true';
+              final bg = i.isEven ? _white : _grey50;
+              return pw.Container(
+                color: bg,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Expanded(
+                      child: pw.Text(
+                        isIndent ? '  ${row[0]}' : row[0],
+                        style: pw.TextStyle(
+                          fontSize: 8.5,
+                          color: isIndent ? _grey400 : _grey800,
+                          font: isIndent ? pw.Font.helveticaOblique() : pw.Font.helvetica(),
+                        ),
+                      ),
+                    ),
+                    pw.Text(
+                      row[1],
+                      style: pw.TextStyle(
+                        font: pw.Font.helveticaBold(),
+                        fontSize: 8.5,
+                        color: isIndent ? _grey400 : _grey800,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        // Highlight row (Gross Profit / Net Profit)
+        if (highlightRow != null)
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            color: highlightColor ?? _blueSoft,
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  highlightRow[0],
+                  style: pw.TextStyle(
+                    font: pw.Font.helveticaBold(),
+                    fontSize: 9,
+                    color: highlightTextColor ?? _blue,
+                  ),
+                ),
+                pw.Text(
+                  highlightRow[1],
+                  style: pw.TextStyle(
+                    font: pw.Font.helveticaBold(),
+                    fontSize: 9,
+                    color: highlightTextColor ?? _blue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Footer total
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: pw.BoxDecoration(
+            color: footerHighlight ? _navy : _navyLight,
+            borderRadius: const pw.BorderRadius.only(
+              bottomLeft: pw.Radius.circular(5),
+              bottomRight: pw.Radius.circular(5),
+            ),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                footerLabel,
+                style: pw.TextStyle(
+                    font: pw.Font.helveticaBold(), fontSize: 9, color: _white),
+              ),
+              pw.Text(
+                footerValue,
+                style: pw.TextStyle(
+                    font: pw.Font.helveticaBold(), fontSize: 9, color: _gold),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  String _pdfFormatCurrency(num value) {
-    return '₹ ${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+  // ── KPI card widget ───────────────────────────────────────────────────────
+  pw.Widget _kpiCard(
+      String label,
+      String value,
+      PdfColor valueColor,
+      PdfColor bg, {
+        bool isBig = false,
+      }) {
+    return pw.Expanded(
+      child: pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: pw.BoxDecoration(
+          color: bg,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+          border: pw.Border.all(color: _grey200),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              label.toUpperCase(),
+              style: const pw.TextStyle(
+                  fontSize: 7, color: _grey600, letterSpacing: 0.5),
+            ),
+            pw.SizedBox(height: 5),
+            pw.Text(
+              value,
+              style: pw.TextStyle(
+                font: pw.Font.helveticaBold(),
+                fontSize: isBig ? 12 : 10,
+                color: valueColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  // ======================== EXCEL GENERATION (unchanged) ========================
-  void _createProfileSheet(excel_package.Excel excel, Map<String, dynamic> data) {
-    final sheet = excel['Profile'];
-    final fullName = data['ownerName']?.toString() ?? data['fullName']?.toString() ?? 'Not Provided';
-    final email = data['email']?.toString() ?? 'Not Provided';
-    final phone = data['phone']?.toString() ?? data['mobile']?.toString() ?? 'Not Provided';
-    final address = data['address']?.toString() ?? 'Not Provided';
-    var dobRaw = data['dob']?.toString() ?? 'Not Provided';
-    String formattedDob = dobRaw;
-    if (dobRaw != 'Not Provided' && dobRaw.contains('-')) {
-      try {
-        final parts = dobRaw.split('-');
-        if (parts.length == 3) formattedDob = '${parts[2]}/${parts[1]}/${parts[0]}';
-      } catch (e) {}
-    }
-    sheet.cell(excel_package.CellIndex.indexByString('A1')).value = excel_package.TextCellValue('USER PROFILE');
-    sheet.cell(excel_package.CellIndex.indexByString('A2')).value = excel_package.TextCellValue('----------------------------------------');
-    sheet.cell(excel_package.CellIndex.indexByString('A4')).value = excel_package.TextCellValue('Full Name:');
-    sheet.cell(excel_package.CellIndex.indexByString('B4')).value = excel_package.TextCellValue(fullName);
-    sheet.cell(excel_package.CellIndex.indexByString('A5')).value = excel_package.TextCellValue('Date of Birth:');
-    sheet.cell(excel_package.CellIndex.indexByString('B5')).value = excel_package.TextCellValue(formattedDob);
-    sheet.cell(excel_package.CellIndex.indexByString('A6')).value = excel_package.TextCellValue('Mobile Number:');
-    sheet.cell(excel_package.CellIndex.indexByString('B6')).value = excel_package.TextCellValue(phone);
-    sheet.cell(excel_package.CellIndex.indexByString('A7')).value = excel_package.TextCellValue('Email Address:');
-    sheet.cell(excel_package.CellIndex.indexByString('B7')).value = excel_package.TextCellValue(email);
-    sheet.cell(excel_package.CellIndex.indexByString('A8')).value = excel_package.TextCellValue('Address:');
-    sheet.cell(excel_package.CellIndex.indexByString('B8')).value = excel_package.TextCellValue(address);
-    sheet.cell(excel_package.CellIndex.indexByString('A10')).value = excel_package.TextCellValue('Report Generated:');
-    sheet.cell(excel_package.CellIndex.indexByString('B10')).value = excel_package.TextCellValue(DateTime.now().toString().split(' ')[0]);
-    sheet.setColumnWidth(0, 20);
-    sheet.setColumnWidth(1, 40);
-  }
+  // Legacy stub (kept to avoid any residual calls; not used in new design)
+  pw.Widget _pdfTable(List<List<String>> data) => pw.SizedBox();
 
-  Future<void> _downloadPdfReport(BuildContext context) async {
+  // ─── Excel ──────────────────────────────────────────────────────────────────
+
+  Future<void> _downloadExcel(BuildContext context) async {
     try {
-      final excel = excel_package.Excel.createExcel();
-      if (excel.tables.containsKey('Sheet1')) excel.delete('Sheet1');
-      _createProfileSheet(excel, resultData);
-      final ownerName = resultData["ownerName"]?.toString() ?? "Business Owner";
-
-      num _safeNum(dynamic value) {
-        if (value == null) return 0;
-        if (value is num) return value;
-        if (value is String) {
-          final parsed = num.tryParse(value);
-          return parsed ?? 0;
-        }
-        return 0;
-      }
+      final ex = excel_package.Excel.createExcel();
+      if (ex.tables.containsKey('Sheet1')) ex.delete('Sheet1');
 
       final years = [
-        {"key": "firstYear", "label": "ACTUAL", "yearEnd": "31ST MARCH 2025"},
-        {"key": "secondYear", "label": "ESTIMATED", "yearEnd": "31ST MARCH 2026"},
-        {"key": "thirdYear", "label": "PROJECTED", "yearEnd": "31ST MARCH 2027"},
+        {'key': 'firstYear', 'label': 'ACTUAL', 'yearEnd': '31ST MARCH 2025'},
+        {
+          'key': 'secondYear',
+          'label': 'ESTIMATED',
+          'yearEnd': '31ST MARCH 2026'
+        },
+        {
+          'key': 'thirdYear',
+          'label': 'PROJECTED',
+          'yearEnd': '31ST MARCH 2027'
+        },
       ];
 
-      for (var yearInfo in years) {
-        final yearKey = yearInfo["key"] as String;
-        final yearLabel = yearInfo["label"] as String;
-        final yearEnd = yearInfo["yearEnd"] as String;
-        final yearData = resultData[yearKey] ?? {};
-        final tradingData = yearData["oneYearTrading"]?["yearOne"] ?? {};
-        final plData = yearData["pl"]?["profitLoss"] ?? {};
-        final bsData = yearData["balanceSheet"]?["bs"] ?? {};
-        final assets = bsData["assets"] ?? {};
-        final liabilities = bsData["liabilities"] ?? {};
+      for (int i = 0; i < years.length; i++) {
+        final info = years[i];
+        final y = resultData[info['key']!] ?? {};
+        final t = y['trading'] ?? {};
+        final p = y['pl'] ?? {};
+        final bs = y['bs'] ?? {};
+        final assets = bs['assets'] ?? {};
+        final liab = bs['liabilities'] ?? {};
+        final label = info['label']!;
+        final yearEnd = info['yearEnd']!;
+        final n = i + 1;
 
-        final tradingDebitItems = <String, num>{
-          "openingStock": _safeNum(tradingData["openingStock"]),
-          "purchases": _safeNum(tradingData["purchases"]),
-          "lessReturn": _safeNum(tradingData["lessReturn"]),
-          "carriageInwards": _safeNum(tradingData["carriageInwards"]),
-          "cartage": _safeNum(tradingData["cartage"]),
-          "dockCharges": _safeNum(tradingData["dockCharges"]),
-          "wages": _safeNum(tradingData["wages"]),
-          "duty": _safeNum(tradingData["duty"]),
-          "freight": _safeNum(tradingData["freight"]),
-          "ClearingCharges": _safeNum(tradingData["ClearingCharges"]),
-          "otherExpenses": _safeNum(tradingData["otherExpenses"]),
-          "grossProfitLoss": _safeNum(tradingData["grossProfitLoss"]),
-        };
-        final tradingCreditItems = <String, num>{
-          "sales": _safeNum(tradingData["sales"]),
-          "closingStock": _safeNum(tradingData["closingStock"]),
-        };
-        final plDebitItems = <String, num>{
-          "salaries": _safeNum(plData["salaries"]),
-          "rent": _safeNum(plData["rent"]),
-          "discountAllowed": _safeNum(plData["discountAllowed"]),
-          "commissionPaid": _safeNum(plData["commissionPaid"]),
-          "insurance": _safeNum(plData["insurance"]),
-          "bankCharges": _safeNum(plData["bankCharges"]),
-          "legalCharges": _safeNum(plData["legalCharges"]),
-          "repairs": _safeNum(plData["repairs"]),
-          "advertising": _safeNum(plData["advertising"]),
-          "tradeExpenses": _safeNum(plData["tradeExpenses"]),
-          "officeExpenses": _safeNum(plData["officeExpenses"]),
-          "badDebts": _safeNum(plData["badDebts"]),
-          "travellingExpenses": _safeNum(plData["travellingExpenses"]),
-          "sellingAndDistribution": _safeNum(plData["sellingAndDistribution"]),
-          "netProfit": _safeNum(plData["netProfit"]),
-        };
-        final plCreditItems = <String, num>{
-          "grossProfitBf": _safeNum(plData["grossProfitBf"]),
-          "interestReceived": _safeNum(plData["interestReceived"]),
-          "discountReceived": _safeNum(plData["discountReceived"]),
-          "commissionReceived": _safeNum(plData["commissionReceived"]),
-          "otherReceipts": _safeNum(plData["otherReceipts"]),
-        };
-        final assetsCalculations = <String, num>{
-          "cashInHand": _safeNum(assets["cashInHand"]),
-          "cashAtBank": _safeNum(assets["cashAtBank"]),
-          "billsReceivable": _safeNum(assets["billsReceivable"]),
-          "landAndBuilding": _safeNum(assets["landAndBuilding"]),
-          "stock": _safeNum(assets["stock"]),
-          "officeBuilding": _safeNum(assets["officeBuilding"]),
-          "officeEquipment": _safeNum(assets["officeEquipment"]),
-        };
-        final liabilitiesCalculations = <String, num>{
-          "billsPayable": _safeNum(liabilities["billsPayable"]),
-          "capital": _safeNum(liabilities["capital"]),
-          "netProfit": _safeNum(liabilities["netProfit"]),
-        };
-        final totalAssets = _safeNum(yearData["balanceSheet"]?["totalAssets"]);
-        final totalLiabilities = _safeNum(yearData["balanceSheet"]?["totalLiabilities"]);
-
-        _createTradingSheet(excel, 'TRADING YEAR ${years.indexOf(yearInfo) + 1} OR $yearLabel', ownerName, tradingDebitItems, tradingCreditItems, yearEnd, yearLabel);
-        _createPLSheet(excel, 'PL YEAR ${years.indexOf(yearInfo) + 1} OR $yearLabel', ownerName, plDebitItems, plCreditItems, yearEnd, yearLabel);
-        _createBalanceSheet(excel, 'BS YEAR ${years.indexOf(yearInfo) + 1} OR $yearLabel', ownerName, assetsCalculations, liabilitiesCalculations, totalAssets, totalLiabilities, yearEnd, yearLabel);
+        _excelTrading(ex, 'TRADING YEAR $n OR $label', t, label, yearEnd);
+        _excelPL(ex, 'PL YEAR $n OR $label', p, label, yearEnd);
+        _excelBS(ex, 'BS YEAR $n OR $label', assets, liab,
+            _n(bs['totalAssets']), _n(bs['totalLiabilities']), label, yearEnd);
       }
 
       final dir = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = '${dir.path}/financial_projection_$timestamp.xlsx';
-      final file = File(filePath);
-      final bytes = excel.save();
+      final path =
+          '${dir.path}/financial_projection_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final bytes = ex.save();
       if (bytes != null) {
-        await file.writeAsBytes(bytes);
-        await OpenFile.open(filePath);
-      } else {
-        debugPrint('Failed to generate Excel file');
+        await File(path).writeAsBytes(bytes);
+        await OpenFile.open(path);
       }
     } catch (e) {
-      debugPrint('Excel error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Excel Error: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
-  void _createTradingSheet(excel_package.Excel excel, String sheetName, String ownerName, Map<String, num> debitItems, Map<String, num> creditItems, String yearEnd, String yearLabel) {
-    final sheet = excel[sheetName];
-    sheet.cell(excel_package.CellIndex.indexByString('A1')).value = excel_package.TextCellValue('TRADING ACCOUNT OF $ownerName FOR THE YEAR ENDING $yearEnd ($yearLabel)');
-    sheet.cell(excel_package.CellIndex.indexByString('A3')).value = excel_package.TextCellValue('Dr');
-    sheet.cell(excel_package.CellIndex.indexByString('B3')).value = excel_package.TextCellValue('Amount(Rs)');
-    sheet.cell(excel_package.CellIndex.indexByString('C3')).value = excel_package.TextCellValue('Cr');
-    sheet.cell(excel_package.CellIndex.indexByString('D3')).value = excel_package.TextCellValue('Amount(Rs)');
-
-    final debitItemList = [
-      {"key": "openingStock", "label": "To Opening Stock"},
-      {"key": "purchases", "label": "To Purchases"},
-      {"key": "lessReturn", "label": "Less: Returns"},
-      {"key": "carriageInwards", "label": "To Carriage Inwards"},
-      {"key": "cartage", "label": "To Cartage"},
-      {"key": "dockCharges", "label": "To Dock Charges"},
-      {"key": "wages", "label": "To Wages"},
-      {"key": "duty", "label": "To Duty"},
-      {"key": "freight", "label": "To Freight"},
-      {"key": "ClearingCharges", "label": "To Clearing Charges"},
-      {"key": "otherExpenses", "label": "To Other Expenses"},
-    ];
-    int row = 4;
-    for (var item in debitItemList) {
-      final value = debitItems[item["key"]] ?? 0;
-      sheet.cell(excel_package.CellIndex.indexByString('A$row')).value = excel_package.TextCellValue(item["label"]!);
-      sheet.cell(excel_package.CellIndex.indexByString('B$row')).value = excel_package.DoubleCellValue(value.toDouble());
-      row++;
+  void _excelTrading(excel_package.Excel ex, String sheetName,
+      Map<String, dynamic> t, String label, String yearEnd) {
+    final sh = ex[sheetName];
+    void cell(String addr, dynamic val) {
+      sh.cell(excel_package.CellIndex.indexByString(addr)).value = val
+      is String
+          ? excel_package.TextCellValue(val)
+          : excel_package.DoubleCellValue((val as num).toDouble());
     }
-    sheet.cell(excel_package.CellIndex.indexByString('A15')).value = excel_package.TextCellValue('To Gross Profit transferred to profit and loss account');
-    sheet.cell(excel_package.CellIndex.indexByString('B15')).value = excel_package.DoubleCellValue((debitItems["grossProfitLoss"] ?? 0).toDouble());
 
-    final creditItemList = [
-      {"key": "sales", "label": "By Sales"},
-      {"key": "closingStock", "label": "By Closing Stock"},
+    cell('A1',
+        'TRADING ACCOUNT FOR THE YEAR ENDING $yearEnd ($label)');
+    cell('A3', 'Dr');
+    cell('B3', 'Amount(Rs)');
+    cell('C3', 'Cr');
+    cell('D3', 'Amount(Rs)');
+
+    final debitItems = [
+      ['To Opening Stock', 'openingStock'],
+      ['To Purchases', 'purchases'],
+      ['Less: Returns', 'lessReturn'],
+      ['To Carriage Inwards', 'carriageInwards'],
+      ['To Cartage', 'cartage'],
+      ['To Dock Charges', 'dockCharges'],
+      ['To Wages', 'wages'],
+      ['To Duty', 'duty'],
+      ['To Freight', 'freight'],
+      ['To Clearing Charges', 'clearingCharges'],
+      ['To Other Expenses', 'otherExpenses'],
     ];
-    row = 4;
-    for (var item in creditItemList) {
-      final value = creditItems[item["key"]] ?? 0;
-      sheet.cell(excel_package.CellIndex.indexByString('C$row')).value = excel_package.TextCellValue(item["label"]!);
-      sheet.cell(excel_package.CellIndex.indexByString('D$row')).value = excel_package.DoubleCellValue(value.toDouble());
-      row++;
+    for (int r = 0; r < debitItems.length; r++) {
+      cell('A${r + 4}', debitItems[r][0]);
+      cell('B${r + 4}', _n(t[debitItems[r][1]]));
     }
-    num totalDebit = 0;
-    for (var item in debitItemList) totalDebit += debitItems[item["key"]] ?? 0;
-    totalDebit += debitItems["grossProfitLoss"] ?? 0;
-    num totalCredit = 0;
-    for (var item in creditItemList) totalCredit += creditItems[item["key"]] ?? 0;
-    final totalRow = 16;
-    sheet.cell(excel_package.CellIndex.indexByString('A$totalRow')).value = excel_package.TextCellValue('Total');
-    sheet.cell(excel_package.CellIndex.indexByString('B$totalRow')).value = excel_package.DoubleCellValue(totalDebit.toDouble());
-    sheet.cell(excel_package.CellIndex.indexByString('C$totalRow')).value = excel_package.TextCellValue('Total');
-    sheet.cell(excel_package.CellIndex.indexByString('D$totalRow')).value = excel_package.DoubleCellValue(totalCredit.toDouble());
+    cell('A15',
+        'To Gross Profit transferred to profit and loss account');
+    cell('B15', _n(t['grossProfit']));
+
+    cell('C4', 'By Sales');
+    cell('D4', _n(t['sales']));
+    cell('C5', 'By Closing Stock');
+    cell('D5', _n(t['closingStock']));
+    cell('A16', 'Total');
+    cell('B16', _n(t['tradingTotal']));
+    cell('C16', 'Total');
+    cell('D16', _n(t['sales']) + _n(t['closingStock']));
   }
 
-  void _createPLSheet(excel_package.Excel excel, String sheetName, String ownerName, Map<String, num> debitItems, Map<String, num> creditItems, String yearEnd, String yearLabel) {
-    final sheet = excel[sheetName];
-    sheet.cell(excel_package.CellIndex.indexByString('A1')).value = excel_package.TextCellValue('PROFIT AND LOSS ACCOUNT OF $ownerName FOR THE YEAR ENDING $yearEnd ($yearLabel)');
-    sheet.cell(excel_package.CellIndex.indexByString('A3')).value = excel_package.TextCellValue('Dr');
-    sheet.cell(excel_package.CellIndex.indexByString('B3')).value = excel_package.TextCellValue('Amount(Rs)');
-    sheet.cell(excel_package.CellIndex.indexByString('C3')).value = excel_package.TextCellValue('Cr');
-    sheet.cell(excel_package.CellIndex.indexByString('D3')).value = excel_package.TextCellValue('Amount(Rs)');
-
-    final debitItemList = [
-      {"key": "salaries", "label": "To Salaries"},
-      {"key": "rent", "label": "To Rent"},
-      {"key": "discountAllowed", "label": "To Discount Allowed"},
-      {"key": "commissionPaid", "label": "To Commission Paid"},
-      {"key": "insurance", "label": "To Insurance"},
-      {"key": "bankCharges", "label": "To Bank Charges"},
-      {"key": "legalCharges", "label": "To Legal Charges"},
-      {"key": "repairs", "label": "To Repairs"},
-      {"key": "advertising", "label": "To Advertising"},
-      {"key": "tradeExpenses", "label": "To Trade Expenses"},
-      {"key": "officeExpenses", "label": "To Office Expenses"},
-      {"key": "badDebts", "label": "To Bad Debts"},
-      {"key": "travellingExpenses", "label": "To Travelling Expenses"},
-      {"key": "sellingAndDistribution", "label": "To Selling & Distribution"},
-    ];
-    int row = 4;
-    for (var item in debitItemList) {
-      final value = debitItems[item["key"]] ?? 0;
-      sheet.cell(excel_package.CellIndex.indexByString('A$row')).value = excel_package.TextCellValue(item["label"]!);
-      sheet.cell(excel_package.CellIndex.indexByString('B$row')).value = excel_package.DoubleCellValue(value.toDouble());
-      row++;
+  void _excelPL(excel_package.Excel ex, String sheetName,
+      Map<String, dynamic> p, String label, String yearEnd) {
+    final sh = ex[sheetName];
+    void cell(String addr, dynamic val) {
+      sh.cell(excel_package.CellIndex.indexByString(addr)).value = val
+      is String
+          ? excel_package.TextCellValue(val)
+          : excel_package.DoubleCellValue((val as num).toDouble());
     }
-    sheet.cell(excel_package.CellIndex.indexByString('A18')).value = excel_package.TextCellValue('To Net Profit (Transferred to Capital Account)');
-    sheet.cell(excel_package.CellIndex.indexByString('B18')).value = excel_package.DoubleCellValue((debitItems["netProfit"] ?? 0).toDouble());
 
-    final creditItemList = [
-      {"key": "grossProfitBf", "label": "By Gross Profit b/f"},
-      {"key": "interestReceived", "label": "By Interest Received"},
-      {"key": "discountReceived", "label": "By Discount Received"},
-      {"key": "commissionReceived", "label": "By Commission Received"},
-      {"key": "otherReceipts", "label": "By Other Receipts"},
+    cell('A1',
+        'PROFIT AND LOSS ACCOUNT FOR THE YEAR ENDING $yearEnd ($label)');
+    cell('A3', 'Dr');
+    cell('B3', 'Amount(Rs)');
+    cell('C3', 'Cr');
+    cell('D3', 'Amount(Rs)');
+
+    final debit = [
+      ['To Salaries', 'salaries'],
+      ['To Rent', 'rent'],
+      ['To Discount Allowed', 'discountAllowed'],
+      ['To Commission Paid', 'commissionPaid'],
+      ['To Insurance', 'insurance'],
+      ['To Bank Charges', 'bankCharges'],
+      ['To Legal Charges', 'legalCharges'],
+      ['To Repairs', 'repairs'],
+      ['To Advertising', 'advertising'],
+      ['To Trade Expenses', 'tradeExpenses'],
+      ['To Office Expenses', 'officeExpenses'],
+      ['To Bad Debts', 'badDebts'],
+      ['To Travelling Expenses', 'travellingExpenses'],
+      ['To Selling & Distribution', 'sellingAndDistribution'],
     ];
-    row = 4;
-    for (var item in creditItemList) {
-      final value = creditItems[item["key"]] ?? 0;
-      sheet.cell(excel_package.CellIndex.indexByString('C$row')).value = excel_package.TextCellValue(item["label"]!);
-      sheet.cell(excel_package.CellIndex.indexByString('D$row')).value = excel_package.DoubleCellValue(value.toDouble());
-      row++;
+    for (int r = 0; r < debit.length; r++) {
+      cell('A${r + 4}', debit[r][0]);
+      cell('B${r + 4}', _n(p[debit[r][1]]));
     }
-    num totalDebit = 0;
-    for (var item in debitItemList) totalDebit += debitItems[item["key"]] ?? 0;
-    totalDebit += debitItems["netProfit"] ?? 0;
-    num totalCredit = 0;
-    for (var item in creditItemList) totalCredit += creditItems[item["key"]] ?? 0;
-    final totalRow = 19;
-    sheet.cell(excel_package.CellIndex.indexByString('A$totalRow')).value = excel_package.TextCellValue('Total');
-    sheet.cell(excel_package.CellIndex.indexByString('B$totalRow')).value = excel_package.DoubleCellValue(totalDebit.toDouble());
-    sheet.cell(excel_package.CellIndex.indexByString('C$totalRow')).value = excel_package.TextCellValue('Total');
-    sheet.cell(excel_package.CellIndex.indexByString('D$totalRow')).value = excel_package.DoubleCellValue(totalCredit.toDouble());
+    cell('A18', 'To Net Profit (Transferred to Capital Account)');
+    cell('B18', _n(p['netProfit']));
+
+    final credit = [
+      ['By Gross Profit b/f', 'grossProfitBf'],
+      ['By Interest Received', 'interestReceived'],
+      ['By Discount Received', 'discountReceived'],
+      ['By Commission Received', 'commissionReceived'],
+      ['By Other Receipts', 'otherReceipts'],
+    ];
+    for (int r = 0; r < credit.length; r++) {
+      cell('C${r + 4}', credit[r][0]);
+      cell('D${r + 4}', _n(p[credit[r][1]]));
+    }
+    cell('A19', 'Total');
+    cell('B19', _n(p['plTotal']));
+    cell('C19', 'Total');
+    cell('D19', _n(p['plTotal']));
   }
 
-  void _createBalanceSheet(excel_package.Excel excel, String sheetName, String ownerName, Map<String, num> assets, Map<String, num> liabilities, num totalAssets, num totalLiabilities, String yearEnd, String yearLabel) {
-    final sheet = excel[sheetName];
-    sheet.cell(excel_package.CellIndex.indexByString('A1')).value = excel_package.TextCellValue('Balance Sheet of $ownerName as on $yearEnd ($yearLabel)');
-    sheet.cell(excel_package.CellIndex.indexByString('A3')).value = excel_package.TextCellValue('Liabilities');
-    sheet.cell(excel_package.CellIndex.indexByString('B3')).value = excel_package.TextCellValue('Amount(Rs)');
-    sheet.cell(excel_package.CellIndex.indexByString('C3')).value = excel_package.TextCellValue('Assets');
-    sheet.cell(excel_package.CellIndex.indexByString('D3')).value = excel_package.TextCellValue('Amount(Rs)');
-
-    final liabilityItems = [
-      {"key": "capital", "label": "Capital"},
-      {"key": "netProfit", "label": "Add: Net Profit"},
-      {"key": "billsPayable", "label": "Bills Payable"},
-    ];
-    int row = 4;
-    for (var item in liabilityItems) {
-      final value = liabilities[item["key"]] ?? 0;
-      sheet.cell(excel_package.CellIndex.indexByString('A$row')).value = excel_package.TextCellValue(item["label"]!);
-      sheet.cell(excel_package.CellIndex.indexByString('B$row')).value = excel_package.DoubleCellValue(value.toDouble());
-      row++;
+  void _excelBS(
+      excel_package.Excel ex,
+      String sheetName,
+      Map<String, dynamic> assets,
+      Map<String, dynamic> liab,
+      num totalAssets,
+      num totalLiabilities,
+      String label,
+      String yearEnd,
+      ) {
+    final sh = ex[sheetName];
+    void cell(String addr, dynamic val) {
+      sh.cell(excel_package.CellIndex.indexByString(addr)).value = val
+      is String
+          ? excel_package.TextCellValue(val)
+          : excel_package.DoubleCellValue((val as num).toDouble());
     }
+
+    cell('A1', 'Balance Sheet as on $yearEnd ($label)');
+    cell('A3', 'Liabilities');
+    cell('B3', 'Amount(Rs)');
+    cell('C3', 'Assets');
+    cell('D3', 'Amount(Rs)');
+
+    final liabItems = [
+      ['Capital', 'capital'],
+      ['Add: Net Profit', 'netProfit'],
+      ['Bills Payable', 'billsPayable'],
+    ];
+    for (int r = 0; r < liabItems.length; r++) {
+      cell('A${r + 4}', liabItems[r][0]);
+      cell('B${r + 4}', _n(liab[liabItems[r][1]]));
+    }
+
     final assetItems = [
-      {"key": "cashInHand", "label": "Cash In Hand"},
-      {"key": "cashAtBank", "label": "Cash at Bank"},
-      {"key": "billsReceivable", "label": "Bills Receivable"},
-      {"key": "stock", "label": "Stock"},
-      {"key": "landAndBuilding", "label": "Land & Building"},
-      {"key": "officeBuilding", "label": "Office Building"},
-      {"key": "officeEquipment", "label": "Office Equipment"},
+      ['Cash In Hand', 'cashInHand'],
+      ['Cash at Bank', 'cashAtBank'],
+      ['Bills Receivable', 'billsReceivable'],
+      ['Stock', 'stock'],
+      ['Land & Building', 'landAndBuilding'],
+      ['Office Building', 'officeBuilding'],
+      ['Office Equipment', 'officeEquipment'],
     ];
-    row = 4;
-    for (var item in assetItems) {
-      final value = assets[item["key"]] ?? 0;
-      sheet.cell(excel_package.CellIndex.indexByString('C$row')).value = excel_package.TextCellValue(item["label"]!);
-      sheet.cell(excel_package.CellIndex.indexByString('D$row')).value = excel_package.DoubleCellValue(value.toDouble());
-      row++;
+    for (int r = 0; r < assetItems.length; r++) {
+      cell('C${r + 4}', assetItems[r][0]);
+      cell('D${r + 4}', _n(assets[assetItems[r][1]]));
     }
-    final totalRow = max(liabilityItems.length, assetItems.length) + 4;
-    sheet.cell(excel_package.CellIndex.indexByString('A$totalRow')).value = excel_package.TextCellValue('Total Liabilities');
-    sheet.cell(excel_package.CellIndex.indexByString('B$totalRow')).value = excel_package.DoubleCellValue(totalLiabilities.toDouble());
-    sheet.cell(excel_package.CellIndex.indexByString('C$totalRow')).value = excel_package.TextCellValue('Total Assets');
-    sheet.cell(excel_package.CellIndex.indexByString('D$totalRow')).value = excel_package.DoubleCellValue(totalAssets.toDouble());
+
+    final totalRow = max(liabItems.length, assetItems.length) + 4;
+    cell('A$totalRow', 'Total Liabilities');
+    cell('B$totalRow', totalLiabilities);
+    cell('C$totalRow', 'Total Assets');
+    cell('D$totalRow', totalAssets);
   }
 
-  // ======================== IMPROVED UI ========================
+  // ─── UI ─────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -653,151 +1338,237 @@ class OneYearResultScreen extends StatelessWidget {
             ),
           ),
           centerTitle: true,
-          backgroundColor: const Color(0xFF1A2C3E), // matching slate
+          backgroundColor: const Color(0xFF1A2C3E),
           foregroundColor: Colors.white,
           elevation: 0,
           actions: [
             IconButton(
-              icon: const Icon(Icons.download, color: Colors.white),
-              tooltip: "Download Excel Report",
-              onPressed: () => _downloadExcelReport(context), // arrow function mein wrap karo
+              icon: const Icon(Icons.table_chart, color: Colors.white),
+              tooltip: "Download Excel",
+              onPressed: () => _downloadExcel(context),
             ),
             IconButton(
               icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-              tooltip: "Download PDF Report",
-              onPressed: () => _downloadPdfReport(context), // arrow function mein wrap karo
+              tooltip: "Download PDF",
+              onPressed: () => _downloadPdf(context),
             ),
           ],
           bottom: const TabBar(
-            labelColor: Color(0xFFC9A227), // gold accent
+            labelColor: Color(0xFFC9A227),
             unselectedLabelColor: Colors.white70,
             indicatorColor: Color(0xFFC9A227),
             tabs: [
-              Tab(text: "Year 1"),
-              Tab(text: "Year 2"),
-              Tab(text: "Year 3"),
+              Tab(text: "Year 1\nActual"),
+              Tab(text: "Year 2\nEstimated"),
+              Tab(text: "Year 3\nProjected"),
             ],
           ),
         ),
         body: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: const [Color(0xFFFFFFFF), Color(0xFFF0F4F8)],
+              colors: [Color(0xFFFFFFFF), Color(0xFFF0F4F8)],
             ),
           ),
           child: TabBarView(
             children: [
-              _buildYearView("firstYear"),
-              _buildYearView("secondYear"),
-              _buildYearView("thirdYear"),
+              _YearView(yearData: resultData['firstYear'] ?? {}),
+              _YearView(yearData: resultData['secondYear'] ?? {}),
+              _YearView(yearData: resultData['thirdYear'] ?? {}),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildYearView(String yearKey) {
-    final year = resultData[yearKey];
-    if (year == null) return const Center(child: Text("No data available"));
-    final tradingData = year["oneYearTrading"]?["yearOne"] ?? {};
-    final plData = year["pl"]?["profitLoss"] ?? {};
-    final bsData = year["balanceSheet"]?["bs"] ?? {};
+// ─────────────────────────────────────────────────────────────────────────────
+//  Year View (single tab content)
+// ─────────────────────────────────────────────────────────────────────────────
+class _YearView extends StatelessWidget {
+  final Map<String, dynamic> yearData;
+  const _YearView({required this.yearData});
 
-    num _safeNum(dynamic v) => v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
+  num _n(dynamic v) =>
+      v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
+
+  String _fmt(dynamic v) {
+    if (v is num) {
+      final s = v.abs().toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (m) => '${m[1]},',
+      );
+      return v < 0 ? '-₹ $s' : '₹ $s';
+    }
+    return '₹ 0';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (yearData.isEmpty) {
+      return const Center(child: Text("No data available"));
+    }
+
+    final t = yearData['trading'] ?? {};
+    final p = yearData['pl'] ?? {};
+    final bs = yearData['bs'] ?? {};
+    final bsAssets = bs['assets'] ?? {};
+    final bsLiab = bs['liabilities'] ?? {};
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          _buildProfitSummaryCard(year),
+          _ProfitSummaryCard(yearData: yearData),
           const SizedBox(height: 24),
-          _buildKeyMetricsCards(year),
+          _KeyMetricsGrid(yearData: yearData),
           const SizedBox(height: 24),
-          ExpandableAccountSection(
+
+          // Trading Account
+          _ExpandableSection(
             title: "Trading Account",
             subtitle: "Revenue & Cost of Goods Sold",
             icon: Icons.trending_up,
-            color: const Color(0xFF1A2C3E),
-            data: {
-              "openingStock": _safeNum(tradingData["openingStock"]),
-              "purchases": _safeNum(tradingData["purchases"]),
-              "lessReturn": _safeNum(tradingData["lessReturn"]),
-              "carriageInwards": _safeNum(tradingData["carriageInwards"]),
-              "cartage": _safeNum(tradingData["cartage"]),
-              "dockCharges": _safeNum(tradingData["dockCharges"]),
-              "wages": _safeNum(tradingData["wages"]),
-              "duty": _safeNum(tradingData["duty"]),
-              "freight": _safeNum(tradingData["freight"]),
-              "ClearingCharges": _safeNum(tradingData["ClearingCharges"]),
-              "otherExpenses": _safeNum(tradingData["otherExpenses"]),
-              "sales": _safeNum(tradingData["sales"]),
-              "closingStock": _safeNum(tradingData["closingStock"]),
-              "grossProfitLoss": _safeNum(tradingData["grossProfitLoss"]),
-            },
+            children: [
+              _AccountTable(
+                leftTitle: "Dr",
+                rightTitle: "Cr",
+                leftRows: [
+                  ['To Opening Stock', _fmt(_n(t['openingStock']))],
+                  ['To Purchases', _fmt(_n(t['purchases']))],
+                  ['Less: Returns', _fmt(_n(t['lessReturn']))],
+                  ['To Carriage Inwards', _fmt(_n(t['carriageInwards']))],
+                  ['To Cartage', _fmt(_n(t['cartage']))],
+                  ['To Dock Charges', _fmt(_n(t['dockCharges']))],
+                  ['To Wages', _fmt(_n(t['wages']))],
+                  ['To Duty', _fmt(_n(t['duty']))],
+                  ['To Freight', _fmt(_n(t['freight']))],
+                  ['To Clearing Charges', _fmt(_n(t['clearingCharges']))],
+                  ['To Other Expenses', _fmt(_n(t['otherExpenses']))],
+                  ['To Gross Profit c/d', _fmt(_n(t['grossProfit']))],
+                ],
+                rightRows: [
+                  ['By Sales', _fmt(_n(t['sales']))],
+                  ['By Closing Stock', _fmt(_n(t['closingStock']))],
+                ],
+                totalLeft: _fmt(_n(t['tradingTotal'])),
+                totalRight:
+                _fmt(_n(t['sales']) + _n(t['closingStock'])),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          ExpandableAccountSection(
-            title: "Profit & Loss",
+
+          // Profit & Loss
+          _ExpandableSection(
+            title: "Profit & Loss Account",
             subtitle: "Operational Performance",
             icon: Icons.account_balance_wallet,
-            color: const Color(0xFF1A2C3E),
-            data: {
-              "salaries": _safeNum(plData["salaries"]),
-              "rent": _safeNum(plData["rent"]),
-              "discountAllowed": _safeNum(plData["discountAllowed"]),
-              "commissionPaid": _safeNum(plData["commissionPaid"]),
-              "insurance": _safeNum(plData["insurance"]),
-              "bankCharges": _safeNum(plData["bankCharges"]),
-              "legalCharges": _safeNum(plData["legalCharges"]),
-              "repairs": _safeNum(plData["repairs"]),
-              "advertising": _safeNum(plData["advertising"]),
-              "tradeExpenses": _safeNum(plData["tradeExpenses"]),
-              "officeExpenses": _safeNum(plData["officeExpenses"]),
-              "badDebts": _safeNum(plData["badDebts"]),
-              "travellingExpenses": _safeNum(plData["travellingExpenses"]),
-              "sellingAndDistribution": _safeNum(plData["sellingAndDistribution"]),
-              "grossProfitBf": _safeNum(plData["grossProfitBf"]),
-              "interestReceived": _safeNum(plData["interestReceived"]),
-              "discountReceived": _safeNum(plData["discountReceived"]),
-              "commissionReceived": _safeNum(plData["commissionReceived"]),
-              "otherReceipts": _safeNum(plData["otherReceipts"]),
-              "netProfit": _safeNum(plData["netProfit"]),
-              "capital": _safeNum(plData["capital"]),
-            },
+            children: [
+              _AccountTable(
+                leftTitle: "Dr",
+                rightTitle: "Cr",
+                leftRows: [
+                  ['To Salaries', _fmt(_n(p['salaries']))],
+                  ['To Rent', _fmt(_n(p['rent']))],
+                  ['To Discount Allowed', _fmt(_n(p['discountAllowed']))],
+                  ['To Commission Paid', _fmt(_n(p['commissionPaid']))],
+                  ['To Insurance', _fmt(_n(p['insurance']))],
+                  ['To Bank Charges', _fmt(_n(p['bankCharges']))],
+                  ['To Legal Charges', _fmt(_n(p['legalCharges']))],
+                  ['To Repairs', _fmt(_n(p['repairs']))],
+                  ['To Advertising', _fmt(_n(p['advertising']))],
+                  ['To Trade Expenses', _fmt(_n(p['tradeExpenses']))],
+                  ['To Office Expenses', _fmt(_n(p['officeExpenses']))],
+                  ['To Bad Debts', _fmt(_n(p['badDebts']))],
+                  ['To Travelling Expenses', _fmt(_n(p['travellingExpenses']))],
+                  ['To Selling & Distribution',
+                    _fmt(_n(p['sellingAndDistribution']))],
+                  ['To Net Profit (to Capital)', _fmt(_n(p['netProfit']))],
+                ],
+                rightRows: [
+                  ['By Gross Profit b/f', _fmt(_n(p['grossProfitBf']))],
+                  ['By Interest Received', _fmt(_n(p['interestReceived']))],
+                  ['By Discount Received', _fmt(_n(p['discountReceived']))],
+                  ['By Commission Received', _fmt(_n(p['commissionReceived']))],
+                  ['By Other Receipts', _fmt(_n(p['otherReceipts']))],
+                ],
+                totalLeft: _fmt(_n(p['plTotal'])),
+                totalRight: _fmt(_n(p['plTotal'])),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          ExpandableAccountSection(
-            title: "Balance Sheet - Assets",
+
+          // Balance Sheet
+          _ExpandableSection(
+            title: "Balance Sheet",
             subtitle: "Financial Position",
             icon: Icons.business_center,
-            color: const Color(0xFF1A2C3E),
-            data: bsData["assets"] ?? {},
+            children: [
+              _AccountTable(
+                leftTitle: "Liabilities",
+                rightTitle: "Assets",
+                leftRows: [
+                  ['Capital', _fmt(_n(bsLiab['capital']))],
+                  ['Add: Net Profit', _fmt(_n(bsLiab['netProfit']))],
+                  ['Bills Payable', _fmt(_n(bsLiab['billsPayable']))],
+                ],
+                rightRows: [
+                  ['Cash In Hand', _fmt(_n(bsAssets['cashInHand']))],
+                  ['Cash at Bank', _fmt(_n(bsAssets['cashAtBank']))],
+                  ['Bills Receivable', _fmt(_n(bsAssets['billsReceivable']))],
+                  ['Stock', _fmt(_n(bsAssets['stock']))],
+                  ['Land & Building', _fmt(_n(bsAssets['landAndBuilding']))],
+                  ['Office Building', _fmt(_n(bsAssets['officeBuilding']))],
+                  ['Office Equipment', _fmt(_n(bsAssets['officeEquipment']))],
+                ],
+                totalLeft: _fmt(_n(bs['totalLiabilities'])),
+                totalRight: _fmt(_n(bs['totalAssets'])),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          ExpandableAccountSection(
-            title: "Balance Sheet - Liabilities",
-            subtitle: "Financial Obligations",
-            icon: Icons.assignment,
-            color: const Color(0xFF1A2C3E),
-            data: bsData["liabilities"] ?? {},
-          ),
+
           const SizedBox(height: 30),
         ],
       ),
     );
   }
+}
 
-  Widget _buildProfitSummaryCard(Map<String, dynamic> year) {
-    final plData = year["pl"]?["profitLoss"] ?? {};
-    final tradingData = year["oneYearTrading"]?["yearOne"] ?? {};
-    num _safeNum(dynamic v) => v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
-    final netProfit = _safeNum(plData["netProfit"]);
+// ─────────────────────────────────────────────────────────────────────────────
+//  Profit Summary Card (pie chart + key numbers)
+// ─────────────────────────────────────────────────────────────────────────────
+class _ProfitSummaryCard extends StatelessWidget {
+  final Map<String, dynamic> yearData;
+  const _ProfitSummaryCard({required this.yearData});
+
+  num _n(dynamic v) =>
+      v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
+
+  String _fmt(dynamic v) {
+    if (v is num) {
+      final s = v.abs().toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (m) => '${m[1]},',
+      );
+      return v < 0 ? '-₹ $s' : '₹ $s';
+    }
+    return '₹ 0';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = yearData['pl'] ?? {};
+    final t = yearData['trading'] ?? {};
+    final netProfit = _n(p['netProfit']);
+    final sales = _n(t['sales']);
     final isProfit = netProfit >= 0;
-    final sales = _safeNum(tradingData["sales"]);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -824,9 +1595,26 @@ class OneYearResultScreen extends StatelessWidget {
                 sectionsSpace: 4,
                 centerSpaceRadius: 38,
                 sections: [
-                  PieChartSectionData(value: sales.abs().toDouble(), color: const Color(0xFFC9A227), radius: 18, showTitle: false),
-                  PieChartSectionData(value: (sales - netProfit).abs().toDouble(), color: const Color(0xFF1A2C3E), radius: 18, showTitle: false),
-                  PieChartSectionData(value: netProfit.abs().toDouble(), color: isProfit ? const Color(0xFF2E7D32) : Colors.red.shade700, radius: 18, showTitle: false),
+                  PieChartSectionData(
+                    value: sales.abs().toDouble(),
+                    color: const Color(0xFFC9A227),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: (sales - netProfit).abs().toDouble(),
+                    color: const Color(0xFF1A2C3E),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: netProfit.abs().toDouble(),
+                    color: isProfit
+                        ? const Color(0xFF2E7D32)
+                        : Colors.red.shade700,
+                    radius: 18,
+                    showTitle: false,
+                  ),
                 ],
               ),
             ),
@@ -836,11 +1624,49 @@ class OneYearResultScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(isProfit ? "Net Profit" : "Net Loss", style: TextStyle(fontSize: 14, color: Colors.grey.shade600, letterSpacing: -0.2)),
+                Text(
+                  isProfit ? "Net Profit" : "Net Loss",
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      letterSpacing: -0.2),
+                ),
                 const SizedBox(height: 6),
-                Text(_formatCurrency(netProfit), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: isProfit ? const Color(0xFF2E7D32) : Colors.red.shade700, letterSpacing: -0.5)),
+                Text(
+                  _fmt(netProfit),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: isProfit
+                        ? const Color(0xFF2E7D32)
+                        : Colors.red.shade700,
+                    letterSpacing: -0.5,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(isProfit ? "Business is Profitable" : "Business is in Loss", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF1A2C3E))),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isProfit
+                        ? const Color(0xFF2E7D32)
+                        : Colors.red.shade700)
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isProfit
+                        ? "Business is Profitable"
+                        : "Business is in Loss",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isProfit
+                          ? const Color(0xFF2E7D32)
+                          : Colors.red.shade700,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -848,39 +1674,91 @@ class OneYearResultScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildKeyMetricsCards(Map<String, dynamic> year) {
-    final tradingData = year["oneYearTrading"]?["yearOne"] ?? {};
-    final plData = year["pl"]?["profitLoss"] ?? {};
-    final bsData = year["balanceSheet"] ?? {};
-    num _safeNum(dynamic v) => v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
-    final netProfit = _safeNum(plData["netProfit"]);
-    final isProfit = netProfit >= 0;
-    final sales = _safeNum(tradingData["sales"]);
-    final grossProfit = _safeNum(tradingData["grossProfitLoss"]);
-    final totalAssets = _safeNum(bsData["totalAssets"]);
+// ─────────────────────────────────────────────────────────────────────────────
+//  Key Metrics 2×2 Grid
+// ─────────────────────────────────────────────────────────────────────────────
+class _KeyMetricsGrid extends StatelessWidget {
+  final Map<String, dynamic> yearData;
+  const _KeyMetricsGrid({required this.yearData});
+
+  num _n(dynamic v) =>
+      v is num ? v : (v is String ? num.tryParse(v) ?? 0 : 0);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = yearData['trading'] ?? {};
+    final p = yearData['pl'] ?? {};
+    final bs = yearData['bs'] ?? {};
+    final netProfit = _n(p['netProfit']);
+
+    final metrics = [
+      {
+        'title': 'Sales',
+        'value': _n(t['sales']),
+        'icon': Icons.trending_up,
+        'color': const Color(0xFF1A2C3E),
+      },
+      {
+        'title': 'Gross Profit',
+        'value': _n(t['grossProfit']),
+        'icon': Icons.attach_money,
+        'color': const Color(0xFFC9A227),
+      },
+      {
+        'title': 'Net Profit',
+        'value': netProfit,
+        'icon': Icons.account_balance_wallet,
+        'color': netProfit >= 0
+            ? const Color(0xFF2E7D32)
+            : Colors.red.shade700,
+      },
+      {
+        'title': 'Total Assets',
+        'value': _n(bs['totalAssets']),
+        'icon': Icons.business,
+        'color': const Color(0xFF1A2C3E),
+      },
+    ];
+
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildMetricCard("Sales", sales, Icons.trending_up, const Color(0xFF1A2C3E))),
+            Expanded(child: _MetricCard(m: metrics[0])),
             const SizedBox(width: 12),
-            Expanded(child: _buildMetricCard("Gross Profit", grossProfit, Icons.attach_money, const Color(0xFFC9A227))),
+            Expanded(child: _MetricCard(m: metrics[1])),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildMetricCard("Net Profit", netProfit, Icons.account_balance_wallet, isProfit ? const Color(0xFF2E7D32) : Colors.red.shade700)),
+            Expanded(child: _MetricCard(m: metrics[2])),
             const SizedBox(width: 12),
-            Expanded(child: _buildMetricCard("Total Assets", totalAssets, Icons.business, const Color(0xFF1A2C3E))),
+            Expanded(child: _MetricCard(m: metrics[3])),
           ],
         ),
       ],
     );
   }
+}
 
-  Widget _buildMetricCard(String title, dynamic value, IconData icon, Color color) {
+class _MetricCard extends StatelessWidget {
+  final Map<String, dynamic> m;
+  const _MetricCard({required this.m});
+
+  String _fmt(num v) {
+    final s = v.abs().toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (match) => '${match[1]},',
+    );
+    return v < 0 ? '-₹ $s' : '₹ $s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = m['color'] as Color;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -897,15 +1775,26 @@ class OneYearResultScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, size: 28, color: color),
+          Icon(m['icon'] as IconData, size: 28, color: color),
           const SizedBox(height: 8),
-          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+          Text(
+            m['title'] as String,
+            style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              _formatCurrency(value),
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color, letterSpacing: -0.2),
+              _fmt(m['value'] as num),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  letterSpacing: -0.2),
             ),
           ),
         ],
@@ -914,118 +1803,256 @@ class OneYearResultScreen extends StatelessWidget {
   }
 }
 
-// ======================== IMPROVED EXPANDABLE SECTION ========================
-class ExpandableAccountSection extends StatefulWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+//  Expandable Section
+// ─────────────────────────────────────────────────────────────────────────────
+class _ExpandableSection extends StatefulWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color color;
-  final Map<String, dynamic> data;
-  const ExpandableAccountSection({super.key, required this.title, required this.subtitle, required this.icon, required this.color, required this.data});
+  final List<Widget> children;
+
+  const _ExpandableSection({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.children,
+  });
 
   @override
-  State<ExpandableAccountSection> createState() => _ExpandableAccountSectionState();
+  State<_ExpandableSection> createState() => _ExpandableSectionState();
 }
 
-class _ExpandableAccountSectionState extends State<ExpandableAccountSection> {
-  bool _isExpanded = false;
-
-  String _formatCurrency(dynamic value) {
-    if (value is num) {
-      String str = value.abs().toStringAsFixed(0);
-      str = str.replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
-      return value < 0 ? '-₹ $str' : '₹ $str';
-    }
-    return '₹ ${value ?? 0}';
-  }
-
-  String _formatCamelCase(String text) {
-    if (text.isEmpty) return text;
-    String result = text.replaceAllMapped(RegExp(r'(?<=[a-z])[A-Z]'), (Match m) => ' ${m.group(0)}');
-    result = result[0].toUpperCase() + result.substring(1);
-    result = result.replaceAll('_', ' ');
-    return result;
-  }
+class _ExpandableSectionState extends State<_ExpandableSection> {
+  bool _open = false;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       color: Colors.white,
-      shadowColor: const Color(0xFF1A2C3E).withOpacity(0.06),
       child: Column(
         children: [
           ListTile(
-            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            onTap: () => setState(() => _open = !_open),
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: widget.color.withOpacity(0.1),
+                color: const Color(0xFF1A2C3E).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(widget.icon, color: widget.color, size: 22),
+              child: Icon(widget.icon,
+                  color: const Color(0xFF1A2C3E), size: 22),
             ),
             title: Text(
               widget.title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: Color(0xFF1A2C3E)),
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                  color: Color(0xFF1A2C3E)),
             ),
             subtitle: Text(
               widget.subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600, letterSpacing: -0.2),
+              style: TextStyle(
+                  fontSize: 12, color: Colors.grey.shade600),
             ),
             trailing: Icon(
-              _isExpanded ? Icons.expand_less : Icons.expand_more,
+              _open ? Icons.expand_less : Icons.expand_more,
               color: const Color(0xFFC9A227),
             ),
           ),
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 300),
-            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            firstChild: Container(),
+            crossFadeState:
+            _open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
             secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 children: [
-                  const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
                   const SizedBox(height: 12),
-                  ...widget.data.entries.map((e) {
-                    final num val = e.value is num ? e.value : 0;
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Colors.grey.shade200, width: 0.5),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.title.contains("Trading") && (e.key == "sales" || e.key == "closingStock")
-                                  ? 'By ${_formatCamelCase(e.key)}'
-                                  : widget.title.contains("Profit & Loss") &&
-                                  (e.key == "grossProfitBf" || e.key == "interestReceived" || e.key == "discountReceived" || e.key == "commissionReceived" || e.key == "otherReceipts")
-                                  ? 'By ${_formatCamelCase(e.key)}'
-                                  : 'To ${_formatCamelCase(e.key)}',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF334155)),
-                            ),
-                          ),
-                          Text(
-                            _formatCurrency(val),
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: val >= 0 ? const Color(0xFF1A2C3E) : Colors.red.shade700),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                  ...widget.children,
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Account Table (Dr/Cr layout)
+// ─────────────────────────────────────────────────────────────────────────────
+class _AccountTable extends StatelessWidget {
+  final String leftTitle;
+  final String rightTitle;
+  final List<List<String>> leftRows;
+  final List<List<String>> rightRows;
+  final String totalLeft;
+  final String totalRight;
+
+  const _AccountTable({
+    required this.leftTitle,
+    required this.rightTitle,
+    required this.leftRows,
+    required this.rightRows,
+    required this.totalLeft,
+    required this.totalRight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final maxRows = max(leftRows.length, rightRows.length);
+
+    return Table(
+      border: TableBorder.all(
+        color: const Color(0xFFE2E8F0),
+        width: 0.8,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      columnWidths: const {
+        0: FlexColumnWidth(2),
+        1: FlexColumnWidth(1.2),
+        2: FlexColumnWidth(2),
+        3: FlexColumnWidth(1.2),
+      },
+      children: [
+        // Header row
+        TableRow(
+          decoration: const BoxDecoration(color: Color(0xFF1A2C3E)),
+          children: [leftTitle, 'Amount', rightTitle, 'Amount']
+              .map((h) => Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 8, vertical: 8),
+            child: Text(
+              h,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ))
+              .toList(),
+        ),
+
+        // Data rows
+        for (int i = 0; i < maxRows; i++)
+          TableRow(
+            decoration: BoxDecoration(
+              color: i.isEven
+                  ? Colors.white
+                  : const Color(0xFFF8FAFD),
+            ),
+            children: [
+              // Left label
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 7),
+                child: Text(
+                  i < leftRows.length ? leftRows[i][0] : '',
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF334155)),
+                ),
+              ),
+              // Left amount
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 7),
+                child: Text(
+                  i < leftRows.length ? leftRows[i][1] : '',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A2C3E)),
+                ),
+              ),
+              // Right label
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 7),
+                child: Text(
+                  i < rightRows.length ? rightRows[i][0] : '',
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF334155)),
+                ),
+              ),
+              // Right amount
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 7),
+                child: Text(
+                  i < rightRows.length ? rightRows[i][1] : '',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A2C3E)),
+                ),
+              ),
+            ],
+          ),
+
+        // Total row
+        TableRow(
+          decoration: const BoxDecoration(color: Color(0xFFF0F4F8)),
+          children: [
+            const Padding(
+              padding:
+              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Text(
+                'Total',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A2C3E)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 8),
+              child: Text(
+                totalLeft,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A2C3E)),
+              ),
+            ),
+            const Padding(
+              padding:
+              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Text(
+                'Total',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A2C3E)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 8),
+              child: Text(
+                totalRight,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A2C3E)),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

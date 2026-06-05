@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:loanready_app/presentation/screens/register/upload_documents_screen.dart';
 import 'package:loanready_app/presentation/screens/splash/splash_screen.dart';
-import 'package:loanready_app/presentation/screens/home/home_screen.dart';
 
 import '../presentation/aboutus/aboutus_screen.dart';
 import '../presentation/screens/auth/otp_login_screen.dart';
 import '../presentation/screens/auth/verify_otp_screen.dart';
+import '../presentation/screens/home/bottom_navbar.dart';
 import '../presentation/screens/payment/confirm_payment_screen.dart';
 import '../presentation/screens/plan/choose_plan_screen.dart';
 import '../presentation/screens/register/business_details_screen.dart';
@@ -30,7 +30,7 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> routes = {
     splash: (context) => const SplashScreen(),
-    home: (context) => const HomeScreen(),
+    home: (context) => const MainNavigationScreen(),
     about: (context) => const AboutUsScreen(),
     register: (context) => const RegisterScreen(),
     businessDetails: (context) => const BusinessDetailsScreen(),

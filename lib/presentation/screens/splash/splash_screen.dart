@@ -76,7 +76,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     // Precache logo image for smooth display
     precacheImage(
-      const AssetImage('assets/logo/logo.png'),
+      const AssetImage('assets/logo/7985578.png'),
       context,
     );
 
@@ -126,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                            'assets/logo/logo.png',
+                            'assets/logo/7985578.png',
                             fit: BoxFit.contain,
                           )
                         ),
@@ -207,7 +207,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-/// Modern breathing dot with scale animation
+
 class BreathingDot extends StatefulWidget {
   final Duration initialDelay;
   const BreathingDot({super.key, required this.initialDelay});
@@ -215,7 +215,7 @@ class BreathingDot extends StatefulWidget {
   @override
   State<BreathingDot> createState() => _BreathingDotState();
 }
-
+/// Modern breathing dot with scale animation
 class _BreathingDotState extends State<BreathingDot>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
@@ -268,7 +268,7 @@ class _BreathingDotState extends State<BreathingDot>
   }
 }
 
-/// Temporary route handler for navigation
+
 class _HomeRoute extends StatelessWidget {
   const _HomeRoute();
 
