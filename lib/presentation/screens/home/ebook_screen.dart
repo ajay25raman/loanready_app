@@ -5,26 +5,54 @@ class EbookScreen extends StatelessWidget {
   const EbookScreen({super.key});
 
   static final List<Map<String, String>> ebooks = [
-    {'title': 'Pradhan Mantri Mudra Yojana (PMMY)', 'url': 'https://drive.google.com/uc?export=download&id=1SEBwb7koT-MUypMqqkyFrfHCGIsYLSij'},
-    {'title': 'SBI e-Mudra', 'url': 'https://drive.google.com/uc?export=download&id=16HVjCXIOSH3mkEJ5hlfMO5BZblLeE5Ff'},
-    {'title': 'Stand-Up India Scheme', 'url': 'https://drive.google.com/uc?export=download&id=1UWq2lHunUMMaaP3P2X7YmF5J_jQOxXO0'},
-    {'title': 'PM Street Vendor’s AtmaNirbhar Nidhi (PM SVANidhi)', 'url': 'https://drive.google.com/uc?export=download&id=1-ogeSHrs5IZDBEqVCmXPiTQ1UvDXqMHg'},
-    {'title': 'Prime Minister’s Employment Generation Programme (PMEGP)', 'url': 'https://drive.google.com/uc?export=download&id=1NnvSs-r9K2Zq0PudCCzVQRZhcSRjbWtX'},
-    {'title': 'Deendayal Antyodaya Yojana – National Rural Livelihoods Mission (DAY-NRLM)', 'url': 'https://drive.google.com/uc?export=download&id=16JlOaLLzO5yqM5IA-1W7SPXOdeokTgVM'},
-    {'title': 'Deendayal Antyodaya Yojana – National Urban Livelihoods Mission (DAY-NULM)', 'url': 'https://drive.google.com/uc?export=download&id=1LzdAkJ9Ful01PjPNHIzox4AyoRbXScIc'},
-    {'title': 'Revised SB-OD Scheme for BSBD Accounts', 'url': 'https://drive.google.com/uc?export=download&id=1x7LuixjugAoKsdAZMXhRJqq1y3dLzpTp'},
-    {'title': 'Agriculture Infrastructure Fund (AIF)', 'url': 'https://drive.google.com/uc?export=download&id=14ZI9VP0oxpfu09C5NEvUz7Z_ayAVGJYE'},
-    {'title': 'Animal Husbandry Infrastructure Development Fund (AHIDF)', 'url': 'https://drive.google.com/uc?export=download&id=1O2eD3Rard133UPrufyoaKu1wwiCWJCeg'},
-    {'title': 'PM Formalization of Micro Food Processing Enterprises (PMFME)', 'url': 'https://drive.google.com/uc?export=download&id=1ow-9EsNZ5pgNBm3w1SeiEA9C3DTfuOCo'},
-    {'title': 'Pradhan Mantri Kisan Urja Suraksha evam Utthaan Mahabiyan (PM KUSUM)', 'url': 'https://drive.google.com/uc?export=download&id=1PpQXN-scbIxs6uiQs7E2NdF-9vie_46k'},
-    {'title': 'Credit Guarantee Fund Trust for Micro and Small Enterprises', 'url': 'https://drive.google.com/uc?export=download&id=1chPA9Yw5uArLna1ps7YERT1a3gNBndd4'},
-    {'title': 'Credit Guarantee Fund for Micro Units', 'url': 'https://drive.google.com/uc?export=download&id=1lWLsVxMyzlQ8IbKhW7KdOLrtyFGgcyHY'},
-    {'title': 'Credit Guarantee Scheme for Stand-Up India', 'url': 'https://drive.google.com/uc?export=download&id=1Dna7B3unksh8JCK7klg2YnmNO09S_JEl'},
-    {'title': 'Interest Subvention', 'url': 'https://drive.google.com/uc?export=download&id=1VXAkDFjdopwoUW10P407yVVG1GsgCQfa'},
-    {'title': 'MSME Subsidy Schemes', 'url': 'https://drive.google.com/uc?export=download&id=1X8qFKX5-uwjIKlfJe68bkBCOWBifj-Rv'},
-    {'title': 'PMFME Scheme', 'url': 'https://drive.google.com/uc?export=download&id=1FPO0NRKgZbf3CG9KndQ_-vjXe7MDuYsT'},
+    {'title': 'PM Street Vendor\'s AtmaNirbhar Nidhi (PM SVANidhi)',
+      'url': 'https://drive.google.com/uc?export=download&id=1fOwlkog1L1H3SHCkRJ80N5PglGGhEF0S',
+    },
+    {
+      'title': 'PM Vishwakarma Loan Scheme',
+      'url': 'https://drive.google.com/uc?export=download&id=1zbU8yP3iW8t1Z28Ev-iCYJg-OzMLNQ61',
+    },
+    {
+      'title': 'StandUpIndia_MSME_Consultants_EBook',
+      'url': 'https://drive.google.com/uc?export=download&id=1-MKB4TILrG3c58s8G6GQG_MojysaqgiK',
+    },
+    {
+      'title': 'PM Vishwakarma Loan Scheme',
+      'url': 'https://drive.google.com/uc?export=download&id=1xgTsgjBJHhb2b0MoAwlUa2053eHnF3_n',
+    },
+    {
+      'title': 'CGTMSE_Complete_Guide_The_MSME_Consultants',
+      'url': 'https://drive.google.com/uc?export=download&id=1EOEgguNz4py732qVmKABFK5jyMNSBFFC',
+    },
+    {
+      'title': 'PMFME Scheme Complete Guide MSME Consultants',
+      'url': 'https://drive.google.com/uc?export=download&id=1c7dkeERkAxiJXwoI4nhRG9pqMrjqhGL8',
+    },
+    {
+      'title': 'PMFME Scheme Complete Guide MSME Consultants',
+      'url': 'https://drive.google.com/uc?export=download&id=1JXOUSO2swkUFC25Tv-geuiG2e95klc7i',
+    },
+    {
+      'title': 'Startup_Govt_Loan_Schemes_Ebook',
+      'url': 'https://drive.google.com/uc?export=download&id=1oSzF4DX_73ts719MbWMng-g19gmL8Nyq',
+    },
+    {
+      'title': 'MSE Govt Loan Schemes India 2025',
+      'url': 'https://drive.google.com/uc?export=download&id=14XQ0oYldgjsxLNGN6zAMnqxkZwSfY2dp',
+    },
+    {
+      'title': 'Fisheries_Loan_Schemes_eBook_MSME_Consultants',
+      'url': 'https://drive.google.com/uc?export=download&id=1MbAxVyGUrI4CK-AUiI0plJf7hIht4p1x',
+    },
+    {
+      'title': 'SHG_Loans_India_NULM_NRLM_MSME_Consultants',
+      'url': 'https://drive.google.com/uc?export=download&id=1NhiLNk1b1HnlIgd-jmfk9-o3FI4pl9Pn',
+    },
+    {
+      'title': 'ECLGS_Complete_Guide_MSME_Consultants 13.pdf',
+      'url': 'https://drive.google.com/uc?export=download&id=15UD09t-lG-69rwfKq0y_rK_2T_Sj_BVw',
+    },
   ];
-
   void _openPDF(BuildContext context, String url, String title) {
     Navigator.push(
       context,
@@ -205,7 +233,7 @@ class EbookScreen extends StatelessWidget {
                             color: Color(0xFF1E293B),
                             height: 1.3,
                           ),
-                          maxLines: 2,
+                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 6),
