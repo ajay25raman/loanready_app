@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'one_year_result_screen.dart';
 
 // ─────────────────────────────────────────────
@@ -252,7 +254,9 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
   final _cashInHandController = TextEditingController();
   final _cashInBankController = TextEditingController();
   final _landController = TextEditingController();
+  final Dio _dio = Dio();
 
+  bool _isLoading = false;
   // Design tokens (unchanged from original)
   static const Color _primary = Color(0xFF1A2C3E);
   static const Color _accent = Color(0xFFC9A227);
@@ -264,24 +268,116 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
 
   double _parse(TextEditingController c) =>
       double.tryParse(c.text.replaceAll(',', '')) ?? 0.0;
-
-  void _generate() {
-    if (!_formKey.currentState!.validate()) return;
-
-    final resultData = FinanceEngine.calculate(
-      sales: _parse(_salesController),
-      commissionReceived: _parse(_commissionController),
-      cashInHand: _parse(_cashInHandController),
-      cashInBank: _parse(_cashInBankController),
-      landAndBuilding: _parse(_landController),
-    );
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OneYearResultScreen(resultData: resultData),
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
       ),
     );
+  }
+  Future<void> _generate() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get JWT token
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+
+      if (token == null || token.isEmpty) {
+        if (!mounted) return;
+
+        _showMessage("Authentication token not found. Please login again.");
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        return;
+      }
+
+      // Request payload
+      final payload = {
+        "sales": _parse(_salesController),
+        "commissionReceived": _parse(_commissionController),
+        "cashInHand": _parse(_cashInHandController),
+        "cashInBank": _parse(_cashInBankController),
+        "landAndBuilding": _parse(_landController),
+
+        // Client requirement
+        "g2": 20,
+        "g3": 25,
+      };
+
+      final response = await _dio.post(
+        "https://loan.edugaondev.com/api/v1/trade/one-year",
+        data: payload,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200 &&
+          response.data["success"] == true) {
+        final result = Map<String, dynamic>.from(response.data);
+
+        debugPrint("FINAL RESULT => $result");
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OneYearResultScreen(
+              resultData: result,
+            ),
+          ),
+        );
+      } else {
+        _showMessage(
+          response.data["message"] ??
+              "Failed to generate report",
+        );
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+
+      String message = "Something went wrong";
+
+      if (e.response?.data is Map) {
+        final data = Map<String, dynamic>.from(
+          e.response!.data,
+        );
+
+        message =
+            data["message"] ??
+                "Failed to generate report";
+      } else if (e.message != null) {
+        message = e.message!;
+      }
+
+      _showMessage(message);
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage(
+        "Failed to generate report: ${e.toString()}",
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -456,7 +552,7 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
               left: 20,
               right: 20,
               child: ElevatedButton(
-                onPressed: _generate,
+                onPressed: _isLoading ? null : _generate,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _primary,
                   foregroundColor: Colors.white,
@@ -466,7 +562,18 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                   ),
                   elevation: 0,
                 ),
-                child: const Row(
+                child: _isLoading
+                    ? const SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.white,
+                    ),
+                  ),
+                )
+                    : const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.analytics, size: 20),

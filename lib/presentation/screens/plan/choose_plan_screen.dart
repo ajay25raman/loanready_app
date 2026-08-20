@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../routes/app_routes.dart';
 import 'choose_plan_screen.dart';
 
 class ChoosePlanScreen extends StatefulWidget {
@@ -80,13 +81,13 @@ class _ChoosePlanScreenState extends State<ChoosePlanScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pushReplacementNamed(context, AppRoutes.home);
           },
         ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/confirmPayment');
+              Navigator.pushNamed(context, '/home');
             },
             child: const Text(
               'Skip',

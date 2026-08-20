@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:loanready_app/presentation/screens/register/profile_screen.dart';
+import 'package:loanready_app/providers/auth_provider.dart';
+import 'package:loanready_app/providers/business_provider.dart';
+import 'package:loanready_app/providers/document_provider.dart';
+import 'package:loanready_app/providers/one_year_report_provider.dart';
+import 'package:loanready_app/providers/theme_provider.dart';
+import 'package:loanready_app/providers/upload_photo_provider.dart';
+import 'package:loanready_app/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:loanready_app/routes/app_routes.dart';
 import 'firebase_options.dart';
@@ -16,6 +23,24 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider(),
+        ),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(
+          create: (_) => OneYearReportProvider(),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) => BusinessProvider(),
+        ),
+
+        ChangeNotifierProvider(create: (_) => DocumentProvider()),
+        ChangeNotifierProvider(create: (_) => UploadPhotoProvider()),
         ChangeNotifierProvider(
           create: (_) => ThemeProvider(),
         ),

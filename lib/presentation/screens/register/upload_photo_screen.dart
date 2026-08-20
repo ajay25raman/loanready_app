@@ -1,28 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:loanready_app/providers/upload_photo_provider.dart';
 
-class UploadPhotoScreen extends StatefulWidget {
+class UploadPhotoScreen extends StatelessWidget {
   const UploadPhotoScreen({super.key});
 
-  @override
-  State<UploadPhotoScreen> createState() => _UploadPhotoScreenState();
-}
+  void _showImagePickerOptions(BuildContext context) {
+    final provider = context.read<UploadPhotoProvider>();
 
-class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
-  File? _image;
-  final ImagePicker _picker = ImagePicker();
-
-  Future<void> _pickImage(ImageSource source) async {
-    final pickedFile = await _picker.pickImage(source: source);
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
-    }
-  }
-
-  void _showImagePickerOptions() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -41,7 +27,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                   icon: const Icon(Icons.camera_alt, size: 35),
                   onPressed: () {
                     Navigator.pop(context);
-                    _pickImage(ImageSource.camera);
+                    provider.pickImage(ImageSource.camera);
                   },
                 ),
                 const Text("Camera"),
@@ -54,7 +40,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                   icon: const Icon(Icons.photo_library, size: 35),
                   onPressed: () {
                     Navigator.pop(context);
-                    _pickImage(ImageSource.gallery);
+                    provider.pickImage(ImageSource.gallery);
                   },
                 ),
                 const Text("Gallery"),
@@ -66,9 +52,20 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
     );
   }
 
+  void _showSnackBar(BuildContext context, String message, bool isSuccess) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool isCaptured = _image != null;
+    final provider = context.watch<UploadPhotoProvider>();
+    final isCaptured = provider.image != null;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -105,28 +102,27 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
             ),
             const SizedBox(height: 50),
 
-            // Profile Image
+            // Profile Image Display
             CircleAvatar(
               radius: 65,
               backgroundColor: Colors.white,
               child: CircleAvatar(
                 radius: 60,
                 backgroundImage:
-                _image != null ? FileImage(_image!) : null,
+                isCaptured ? FileImage(provider.image!) : null,
                 backgroundColor: const Color(0xFFEFEFEF),
-                child: _image == null
+                child: !isCaptured
                     ? const Icon(Icons.person, size: 70, color: Colors.grey)
                     : null,
               ),
             ),
             const SizedBox(height: 25),
 
-            // Capture Button
+            // Capture / Retake Button
             ElevatedButton(
-              onPressed: isCaptured ? null : _showImagePickerOptions,
+              onPressed: () => _showImagePickerOptions(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                isCaptured ? Colors.grey.shade400 : const Color(0xFF002D72),
+                backgroundColor: const Color(0xFF002D72),
                 padding:
                 const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -134,9 +130,9 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                 ),
               ),
               child: Text(
-                isCaptured ? 'Captured' : 'Capture Photo',
-                style: TextStyle(
-                  color: isCaptured ? Colors.white70 : Colors.white,
+                isCaptured ? 'Retake Photo' : 'Capture Photo',
+                style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -158,17 +154,33 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: isCaptured
-                      ? () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Photo Submitted Successfully!"),
-                      ),
+                  onPressed: (isCaptured && !provider.isLoading)
+                      ? () async {
+                    final result = await provider.uploadProfilePic();
+                    if (!context.mounted) return;
+
+                    final isSuccess = result['success'] == true;
+                    _showSnackBar(
+                      context,
+                      result['message'] ?? '',
+                      isSuccess,
                     );
-                         Navigator.pushNamed(context, '/choosePlan');
+
+                    if (isSuccess) {
+                      Navigator.pushNamed(context, '/choosePlan');
+                    }
                   }
                       : null,
-                  child: const Text(
+                  child: provider.isLoading
+                      ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                      : const Text(
                     "Submit",
                     style: TextStyle(
                       fontSize: 16,

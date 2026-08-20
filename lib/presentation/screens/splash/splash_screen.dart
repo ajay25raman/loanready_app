@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../routes/app_routes.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -51,19 +51,19 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Navigate to home after splash duration
-    Future.delayed(const Duration(milliseconds: 2400), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 600),
-            pageBuilder: (_, __, ___) => const _HomeRoute(),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
+    Future.delayed(const Duration(milliseconds: 2400), () async {
+      if (!mounted) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+
+      if (token != null && token.isNotEmpty) {
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.otpLogin);
       }
     });
+
   }
 
   @override

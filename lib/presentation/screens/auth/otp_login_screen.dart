@@ -1,130 +1,25 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:loanready_app/providers/auth_provider.dart';
+import 'package:loanready_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:loanready_app/routes/app_routes.dart';
 import 'verify_otp_screen.dart';
 
-class OtpLoginScreen extends StatefulWidget {
+class OtpLoginScreen extends StatelessWidget {
   const OtpLoginScreen({super.key});
 
-  @override
-  State<OtpLoginScreen> createState() => _OtpLoginScreenState();
-}
-
-class _OtpLoginScreenState extends State<OtpLoginScreen> {
-  final TextEditingController phoneController = TextEditingController();
-  bool isLoading = false;
-  String? errorText;
-  bool isPhoneValid = false;
-
-  final String countryCode = "+91";
-
-  // ✅ FIXED BASE URL
-  final String baseUrl = "https://loan.edugaondev.com/api/v1";
-
-  void validatePhoneNumber() {
-    setState(() {
-      isPhoneValid = phoneController.text.isNotEmpty &&
-          RegExp(r'^\d+$').hasMatch(phoneController.text);
-    });
-  }
-
-  Future<void> sendOtp() async {
-    final phoneNumber = phoneController.text.trim();
-
-    if (!isPhoneValid) return;
-
-    setState(() {
-      errorText = null;
-      isLoading = true;
-    });
-
-    try {
-      // ✅ CORRECT ENDPOINT
-      final url = Uri.parse("$baseUrl/otp/send");
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json", // ✅ important
-        },
-        body: jsonEncode({
-          "countryCode": countryCode,
-          "mobile": phoneNumber,
-          "templateId": "register"
-        }),
+  void _showSnackBar(BuildContext context, String message, Color color) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
-
-      print("STATUS: ${response.statusCode}");
-      print("BODY: ${response.body}");
-
-      dynamic responseData;
-
-      // ✅ SAFE JSON CHECK
-      if (response.headers['content-type']
-          ?.contains('application/json') ??
-          false) {
-        responseData = jsonDecode(response.body);
-      } else {
-        throw Exception("Server returned HTML instead of JSON");
-      }
-
-      if (response.statusCode == 200) {
-        final verificationId = responseData["verificationId"];
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const VerifyOtpScreen(),
-            settings: RouteSettings(
-              arguments: {
-                "mobile": phoneNumber,
-                "verificationId": verificationId,
-                "countryCode": countryCode,
-              },
-            ),
-          ),
-        );
-      } else {
-        setState(() {
-          errorText =
-              responseData["message"] ?? "Something went wrong";
-        });
-      }
-    } catch (e) {
-      setState(() {
-        errorText = "Something went wrong: $e";
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void _onPhoneNumberChanged(String value) {
-    if (errorText != null) {
-      setState(() {
-        errorText = null;
-      });
-    }
-
-    validatePhoneNumber();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    phoneController.addListener(() {
-      _onPhoneNumberChanged(phoneController.text);
-      validatePhoneNumber();
-    });
-  }
-
-  @override
-  void dispose() {
-    phoneController.dispose();
-    super.dispose();
   }
 
   @override
@@ -132,156 +27,196 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              Center(
-                child: Image.network(
-                  'https://img.freepik.com/free-vector/mobile-login-concept-illustration_114360-83.jpg?w=826',
-                  height: 250,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                'Enter your phone number',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "We'll send you a text verification code.",
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w400,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  border: Border.all(
-                    color: errorText != null
-                        ? Colors.red
-                        : Colors.grey.shade300,
+        child: Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Center(
+                    child: Image.network(
+                      'https://img.freepik.com/free-vector/mobile-login-concept-illustration_114360-83.jpg?w=826',
+                      height: 250,
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: 40),
+                  const Text(
+                    'Enter your phone number',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "We'll send you a text verification code.",
+                    style: TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.w400),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 40),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      border: Border.all(color: auth.errorMessage != null ? Colors.red : Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                          child: Row(
+                            children: [
+                              const Text('🇮🇳', style: TextStyle(fontSize: 16)),
+                              const SizedBox(width: 6),
+                              Text(auth.countryCode, style: const TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: auth.phoneController,
+                            keyboardType: TextInputType.phone,
+                            maxLength: 10,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                            decoration: const InputDecoration(
+                              hintText: 'Enter 10-digit number',
+                              hintStyle: TextStyle(color: Colors.grey, fontWeight: FontWeight.w400),
+                              border: InputBorder.none,
+                              counterText: '',
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (auth.errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(auth.errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
+                  ],
+                   SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: (auth.isLoading || !auth.isPhoneValid)
+                          ? null
+                          : () async {
+                        final res = await auth.sendOtp();
+                        if (res != null && context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const VerifyOtpScreen()),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: auth.isPhoneValid ? const Color(0xFF1A237E) : Colors.grey.shade400,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 1,
                       ),
-                      child: const Row(
+                      child: auth.isLoading
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text('Send', style: TextStyle(fontSize: 16, color: auth.isPhoneValid ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey.shade300)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("OR", style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey.shade300)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: OutlinedButton(
+                      onPressed: auth.isLoading
+                          ? null
+                          : () async {
+                        FocusScope.of(context).unfocus();
+
+                        final success =
+                        await auth.continueAsGuest();
+
+                        if (!context.mounted) return;
+
+                        if (success) {
+                          await context
+                              .read<UserProvider>()
+                              .fetchUserData();
+
+                          if (!context.mounted) return;
+
+                          Navigator.pushReplacementNamed(
+                            context,
+                            AppRoutes.home,
+                          );
+                        } else {
+                          _showSnackBar(
+                            context,
+                            auth.errorMessage ??
+                                'Unable to continue as guest',
+                            Colors.red,
+                          );
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1A237E),
+                        disabledForegroundColor:
+                        const Color(0xFF1A237E).withOpacity(0.6),
+                        side: const BorderSide(
+                          color: Color(0xFF1A237E),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: auth.isLoading
+                          ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF1A237E),
+                          ),
+                        ),
+                      )
+                          : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('🇮🇳', style: TextStyle(fontSize: 16)),
-                          SizedBox(width: 6),
+                          Icon(
+                            Icons.person_outline,
+                          ),
+                          SizedBox(width: 8),
                           Text(
-                            '+91',
+                            'Continue as Guest',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        maxLength: 15,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Enter 10-digit number',
-                          hintStyle: TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          border: InputBorder.none,
-                          counterText: '',
-                          errorText: null,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: _onPhoneNumberChanged,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (errorText != null) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    errorText!,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 40),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed:
-                  (isLoading || !isPhoneValid) ? null : sendOtp,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isPhoneValid
-                        ? const Color(0xFF1A237E)
-                        : Colors.grey.shade400,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 1,
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
                   )
-                      : Text(
-                    'Send',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: isPhoneValid
-                          ? Colors.white
-                          : Colors.grey.shade600,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
