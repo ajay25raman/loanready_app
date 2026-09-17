@@ -8,7 +8,9 @@ class DocumentProvider extends ChangeNotifier {
   final DocumentService _apiService = DocumentService();
 
   bool _isLoading = false;
+  String? _errorMessage;
 
+  String? get errorMessage => _errorMessage;
   bool get isLoading => _isLoading;
 
   // ============================================================
@@ -167,7 +169,10 @@ class DocumentProvider extends ChangeNotifier {
       final fileName =
           result.files.single.name;
 
-      // Update local file
+      // ----------------------------------------------------------
+      // IMMEDIATELY UPDATE UI
+      // ----------------------------------------------------------
+
       onPicked(
         filePath,
         fileName,
@@ -175,9 +180,13 @@ class DocumentProvider extends ChangeNotifier {
 
       notifyListeners();
 
-      // ========================================================
-      // OCR ONLY FOR IMAGES
-      // ========================================================
+      // ----------------------------------------------------------
+      // OCR ONLY FOR PAN / AADHAAR
+      // ----------------------------------------------------------
+
+      if (!isPan && !isAadhaar) {
+        return;
+      }
 
       final lowerPath =
       filePath.toLowerCase();
@@ -187,13 +196,17 @@ class DocumentProvider extends ChangeNotifier {
               lowerPath.endsWith('.jpg') ||
               lowerPath.endsWith('.jpeg');
 
+      // PDF → don't OCR
       if (!isImage) {
         return;
       }
 
+      // ----------------------------------------------------------
+      // OCR
+      // ----------------------------------------------------------
+
       final extractedText =
-      await _apiService
-          .extractTextFromImage(
+      await _apiService.extractTextFromImage(
         filePath,
       );
 
@@ -202,9 +215,9 @@ class DocumentProvider extends ChangeNotifier {
         return;
       }
 
-      // ========================================================
+      // ----------------------------------------------------------
       // PAN OCR
-      // ========================================================
+      // ----------------------------------------------------------
 
       if (isPan) {
         final panRegex = RegExp(
@@ -224,9 +237,9 @@ class DocumentProvider extends ChangeNotifier {
         }
       }
 
-      // ========================================================
+      // ----------------------------------------------------------
       // AADHAAR OCR
-      // ========================================================
+      // ----------------------------------------------------------
 
       if (isAadhaar) {
         final aadhaarRegex = RegExp(
@@ -254,6 +267,8 @@ class DocumentProvider extends ChangeNotifier {
       debugPrint(
         'FILE PICKER ERROR => $e',
       );
+
+      // File selection fail hone par app crash nahi karega.
     }
   }
 
@@ -386,8 +401,7 @@ class DocumentProvider extends ChangeNotifier {
   // SAVE / CREATE DOCUMENTS
   // ============================================================
 
-  Future<Map<String, dynamic>>
-  saveDocuments() async {
+  Future<Map<String, dynamic>> saveDocuments() async {
     _isLoading = true;
     notifyListeners();
 
@@ -415,13 +429,18 @@ class DocumentProvider extends ChangeNotifier {
         businessProofPath,
       );
 
-      final result =
-      await _apiService
-          .uploadDocuments(docs);
+      debugPrint(
+        'CREATE DOCUMENT START',
+      );
 
-      // ========================================================
-      // SUCCESS
-      // ========================================================
+      final result =
+      await _apiService.uploadDocuments(
+        docs,
+      );
+
+      debugPrint(
+        'CREATE DOCUMENT COMPLETED',
+      );
 
       if (result['success'] == true) {
         final documents =
@@ -436,23 +455,19 @@ class DocumentProvider extends ChangeNotifier {
                   ?.toString();
 
           aadhaarDocUrl =
-              documents[
-              'aadhaar_doc_url']
+              documents['aadhaar_doc_url']
                   ?.toString();
 
           shopLicenseUrl =
-              documents[
-              'shop_license_url']
+              documents['shop_license_url']
                   ?.toString();
 
           gstCertificateUrl =
-              documents[
-              'gst_certificate_url']
+              documents['gst_certificate_url']
                   ?.toString();
 
           businessProofUrl =
-              documents[
-              'business_proof_url']
+              documents['business_proof_url']
                   ?.toString();
 
           photoUrl =
@@ -460,10 +475,25 @@ class DocumentProvider extends ChangeNotifier {
                   ?.toString();
         }
 
+        // IMPORTANT:
+        // No fetchDocuments() here.
         notifyListeners();
+
+        return {
+          ...result,
+          'success': true,
+          'message':
+          result['message']?.toString() ??
+              'Documents submitted successfully!',
+        };
       }
 
-      return result;
+      return {
+        'success': false,
+        'message':
+        result['message']?.toString() ??
+            'Failed to save documents.',
+      };
     } catch (e) {
       debugPrint(
         'SAVE DOCUMENT ERROR => $e',
@@ -472,7 +502,7 @@ class DocumentProvider extends ChangeNotifier {
       return {
         'success': false,
         'message':
-        'Failed to save documents: $e',
+        'Failed to save documents.',
       };
     } finally {
       _isLoading = false;
@@ -484,21 +514,35 @@ class DocumentProvider extends ChangeNotifier {
   // UPDATE DOCUMENTS
   // ============================================================
 
-  Future<Map<String, dynamic>>
-  updateDocuments() async {
+
+
+  Future<Map<String, dynamic>> updateDocuments() async {
     if (documentId == null) {
       return {
         'success': false,
-        'message':
-        'Document ID not found.',
+        'message': 'Document ID not found.',
+      };
+    }
+
+    if (_isLoading) {
+      return {
+        'success': false,
+        'message': 'Update already in progress.',
       };
     }
 
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
+      // ==========================================================
+      // KEEP EXISTING URL IF NEW FILE IS NOT SELECTED
+      // ==========================================================
+
       final docs = DocumentsModel(
+        id: documentId,
+
         panNumber:
         panController.text.trim(),
 
@@ -506,19 +550,45 @@ class DocumentProvider extends ChangeNotifier {
         aadhaarController.text.trim(),
 
         panDoc:
-        panFilePath,
+        _hasValue(panFilePath)
+            ? panFilePath
+            : panDocUrl,
 
         aadhaarDoc:
-        aadhaarFilePath,
+        _hasValue(aadhaarFilePath)
+            ? aadhaarFilePath
+            : aadhaarDocUrl,
 
         shopLicenseDoc:
-        shopLicensePath,
+        _hasValue(shopLicensePath)
+            ? shopLicensePath
+            : shopLicenseUrl,
 
         gstCertificateDoc:
-        gstCertificatePath,
+        _hasValue(gstCertificatePath)
+            ? gstCertificatePath
+            : gstCertificateUrl,
 
         businessProofDoc:
-        businessProofPath,
+        _hasValue(businessProofPath)
+            ? businessProofPath
+            : businessProofUrl,
+      );
+
+      debugPrint(
+        '========== UPDATE DOCUMENTS ==========',
+      );
+
+      debugPrint(
+        'DOCUMENT ID => $documentId',
+      );
+
+      debugPrint(
+        'PAN => ${docs.panNumber}',
+      );
+
+      debugPrint(
+        'AADHAAR => ${docs.aadhaarNumber}',
       );
 
       final result =
@@ -527,16 +597,99 @@ class DocumentProvider extends ChangeNotifier {
         docs,
       );
 
+      debugPrint(
+        'UPDATE DOCUMENT RESPONSE => $result',
+      );
+
+      // ==========================================================
+      // SUCCESS
+      // ==========================================================
+
       if (result['success'] == true) {
-        await fetchDocuments();
+        final updatedData =
+            result['documents'] ??
+                result['data'];
+
+        // --------------------------------------------------------
+        // If API returns updated document
+        // --------------------------------------------------------
+
+        if (updatedData is Map) {
+          final updated =
+          DocumentsModel.fromJson(
+            Map<String, dynamic>.from(
+              updatedData,
+            ),
+          );
+
+          documentId = updated.id ?? documentId;
+
+          panController.text =
+              updated.panNumber;
+
+          aadhaarController.text =
+              updated.aadhaarNumber;
+
+          panDocUrl =
+              updated.panDoc;
+
+          aadhaarDocUrl =
+              updated.aadhaarDoc;
+
+          shopLicenseUrl =
+              updated.shopLicenseDoc;
+
+          gstCertificateUrl =
+              updated.gstCertificateDoc;
+
+          businessProofUrl =
+              updated.businessProofDoc;
+        } else {
+          // ------------------------------------------------------
+          // If API doesn't return updated document,
+          // update local state immediately.
+          // ------------------------------------------------------
+
+          panDocUrl = docs.panDoc;
+          aadhaarDocUrl = docs.aadhaarDoc;
+          shopLicenseUrl = docs.shopLicenseDoc;
+          gstCertificateUrl =
+              docs.gstCertificateDoc;
+          businessProofUrl =
+              docs.businessProofDoc;
+        }
+
+        notifyListeners();
+
+        return {
+          ...result,
+          'success': true,
+          'message':
+          result['message']?.toString() ??
+              'Documents updated successfully.',
+        };
       }
 
-      return result;
+      // ==========================================================
+      // API FAILED
+      // ==========================================================
+
+      return {
+        ...result,
+        'success': false,
+        'message':
+        result['message']?.toString() ??
+            'Failed to update documents.',
+      };
     } catch (e) {
+      debugPrint(
+        'UPDATE DOCUMENT ERROR => $e',
+      );
+
       return {
         'success': false,
         'message':
-        'Failed to update documents: $e',
+        'Failed to update documents. Please try again.',
       };
     } finally {
       _isLoading = false;

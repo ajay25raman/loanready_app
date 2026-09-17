@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:loanready_app/providers/one_year_trading_provider.dart';
 import 'one_year_result_screen.dart';
 
 // ─────────────────────────────────────────────
-//  Thousand-separator formatter (unchanged)
+//  Thousand-separator formatter
 // ─────────────────────────────────────────────
 class ThousandSeparatorInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
     if (newValue.text.isEmpty) return newValue;
     final String newText = newValue.text.replaceAll(',', '');
     if (!RegExp(r'^\d*\.?\d*$').hasMatch(newText)) return oldValue;
@@ -33,210 +35,6 @@ class ThousandSeparatorInputFormatter extends TextInputFormatter {
 }
 
 // ─────────────────────────────────────────────
-//  Finance Engine  (all Excel formulas here)
-// ─────────────────────────────────────────────
-class FinanceEngine {
-  // Growth factors for Year 1, 2, 3
-  static const List<double> growthFactors = [1.0, 1.2, 1.5];
-
-  static Map<String, dynamic> calculate({
-    required double sales,
-    required double commissionReceived,
-    required double cashInHand,
-    required double cashInBank,
-    required double landAndBuilding,
-  }) {
-    // Base values for office building/equipment (Year 1)
-    final double ob1 = landAndBuilding * 0.20;
-    final double oe1 = landAndBuilding * 0.10;
-
-    final List<Map<String, dynamic>> years = [];
-
-    for (int i = 0; i < 3; i++) {
-      final double gf = growthFactors[i];
-      final double s = sales * gf;
-      final double commission = commissionReceived * gf;
-
-      // ── TRADING ACCOUNT ──────────────────────────────
-      final double openingStock = s * 0.018;
-      final double purchases = s * 0.30;
-      final double lessReturn = purchases * 0.009;
-      final double carriageInwards = s * 0.03;
-      final double cartage = s * 0.01;
-      final double dockCharges = s * 0.001;
-      final double wages = s * 0.10;
-      final double duty = s * 0.06;
-      final double freight = s * 0.01;
-      final double clearingCharges = s * 0.0017;
-      final double grossProfit = s * 0.48;
-
-      // closingStock in Trading = sales * 0.08 * gf
-      final double closingStockTrading = s * 0.08 * gf;
-
-      // otherExpenses = balancing figure so Trading tallies
-      final double knownDr = openingStock +
-          purchases -
-          lessReturn +
-          carriageInwards +
-          cartage +
-          dockCharges +
-          wages +
-          duty +
-          freight +
-          clearingCharges;
-      final double tradingCr = s + closingStockTrading;
-      final double otherExpenses = tradingCr - grossProfit - knownDr;
-
-      final double tradingTotal = knownDr + otherExpenses + grossProfit;
-
-      // ── PROFIT & LOSS ─────────────────────────────────
-      final double salaries = s * 0.048;
-      final double rent = s * 0.0528;
-      final double discountAllowed = s * 0.00048;
-      final double commissionPaid = s * 0.0096;
-      final double insurance = s * 0.0144;
-      final double bankCharges = s * 0.0024;
-      final double legalCharges = s * 0.00192;
-      final double repairs = s * 0.00288;
-      final double advertising = s * 0.0024;
-      final double tradeExpenses = s * 0.00432;
-      final double officeExpenses = s * 0.0048;
-      final double badDebts = s * 0.0024;
-      final double travellingExpenses = s * 0.00192;
-      final double sellingAndDistribution = s * 0.05416;
-
-      final double interestReceived = s * 0.04368;
-      final double discountReceived = s * 0.00096;
-      final double otherReceipts = s * 0.00384;
-
-      final double totalDrExpenses = salaries +
-          rent +
-          discountAllowed +
-          commissionPaid +
-          insurance +
-          bankCharges +
-          legalCharges +
-          repairs +
-          advertising +
-          tradeExpenses +
-          officeExpenses +
-          badDebts +
-          travellingExpenses +
-          sellingAndDistribution;
-
-      final double totalPlCr = grossProfit +
-          interestReceived +
-          discountReceived +
-          commission +
-          otherReceipts;
-
-      final double netProfit = totalPlCr - totalDrExpenses;
-      final double plTotal = totalDrExpenses + netProfit; // = totalPlCr
-
-      // ── BALANCE SHEET ─────────────────────────────────
-      final double cih = cashInHand * gf;
-      final double cib = cashInBank * gf;
-      final double billsReceivable = s * 0.10;
-      final double stockBs = s * 0.08; // BS stock (no extra gf)
-      final double capital = s * 0.25;
-
-      // Land: Y1=original, Y2=original*gf, Y3=original
-      final double land = (i == 1) ? landAndBuilding * gf : landAndBuilding;
-
-      // officeBuilding: Y1=ob1, Y2=ob1*gf², Y3=ob1*gf
-      final double officeBuilding = (i == 0)
-          ? ob1
-          : (i == 1)
-          ? ob1 * gf * gf
-          : ob1 * gf;
-
-      // officeEquipment: Y1=oe1, Y2=oe1*gf², Y3=oe1*gf²
-      final double officeEquipment = (i == 0) ? oe1 : oe1 * gf * gf;
-
-      final double totalAssets =
-          cih + cib + billsReceivable + land + stockBs + officeBuilding + officeEquipment;
-
-      final double billsPayable = totalAssets - capital - netProfit;
-      final double totalLiabilities = billsPayable + capital + netProfit;
-
-      years.add({
-        'sales': s,
-        'growthFactor': gf,
-
-        // Trading
-        'trading': {
-          'openingStock': openingStock,
-          'purchases': purchases,
-          'lessReturn': lessReturn,
-          'carriageInwards': carriageInwards,
-          'cartage': cartage,
-          'dockCharges': dockCharges,
-          'wages': wages,
-          'duty': duty,
-          'freight': freight,
-          'clearingCharges': clearingCharges,
-          'otherExpenses': otherExpenses,
-          'grossProfit': grossProfit,
-          'closingStock': closingStockTrading,
-          'tradingTotal': tradingTotal,
-        },
-
-        // PL
-        'pl': {
-          'salaries': salaries,
-          'rent': rent,
-          'discountAllowed': discountAllowed,
-          'commissionPaid': commissionPaid,
-          'insurance': insurance,
-          'bankCharges': bankCharges,
-          'legalCharges': legalCharges,
-          'repairs': repairs,
-          'advertising': advertising,
-          'tradeExpenses': tradeExpenses,
-          'officeExpenses': officeExpenses,
-          'badDebts': badDebts,
-          'travellingExpenses': travellingExpenses,
-          'sellingAndDistribution': sellingAndDistribution,
-          'netProfit': netProfit,
-          'grossProfitBf': grossProfit,
-          'interestReceived': interestReceived,
-          'discountReceived': discountReceived,
-          'commissionReceived': commission,
-          'otherReceipts': otherReceipts,
-          'plTotal': plTotal,
-        },
-
-        // BS
-        'bs': {
-          'assets': {
-            'cashInHand': cih,
-            'cashAtBank': cib,
-            'billsReceivable': billsReceivable,
-            'landAndBuilding': land,
-            'stock': stockBs,
-            'officeBuilding': officeBuilding,
-            'officeEquipment': officeEquipment,
-          },
-          'liabilities': {
-            'capital': capital,
-            'netProfit': netProfit,
-            'billsPayable': billsPayable,
-          },
-          'totalAssets': totalAssets,
-          'totalLiabilities': totalLiabilities,
-        },
-      });
-    }
-
-    return {
-      'firstYear': years[0],
-      'secondYear': years[1],
-      'thirdYear': years[2],
-    };
-  }
-}
-
-// ─────────────────────────────────────────────
 //  INPUT SCREEN
 // ─────────────────────────────────────────────
 class OneYearTradingScreen extends StatefulWidget {
@@ -254,10 +52,7 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
   final _cashInHandController = TextEditingController();
   final _cashInBankController = TextEditingController();
   final _landController = TextEditingController();
-  final Dio _dio = Dio();
 
-  bool _isLoading = false;
-  // Design tokens (unchanged from original)
   static const Color _primary = Color(0xFF1A2C3E);
   static const Color _accent = Color(0xFFC9A227);
   static const Color _backgroundStart = Color(0xFFFFFFFF);
@@ -268,6 +63,7 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
 
   double _parse(TextEditingController c) =>
       double.tryParse(c.text.replaceAll(',', '')) ?? 0.0;
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -276,110 +72,50 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
       ),
     );
   }
+
   Future<void> _generate() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    FocusScope.of(context).unfocus();
 
-    try {
-      // Get JWT token
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("auth_token");
+    final provider = context.read<OneYearTradingProvider>();
 
-      if (token == null || token.isEmpty) {
-        if (!mounted) return;
+    final result = await provider.generateReport(
+      sales: _parse(_salesController),
+      commissionReceived: _parse(_commissionController),
+      cashInHand: _parse(_cashInHandController),
+      cashInBank: _parse(_cashInBankController),
+      landAndBuilding: _parse(_landController),
+    );
 
-        _showMessage("Authentication token not found. Please login again.");
+    if (!mounted) return;
 
-        setState(() {
-          _isLoading = false;
-        });
-
-        return;
-      }
-
-      // Request payload
-      final payload = {
-        "sales": _parse(_salesController),
-        "commissionReceived": _parse(_commissionController),
-        "cashInHand": _parse(_cashInHandController),
-        "cashInBank": _parse(_cashInBankController),
-        "landAndBuilding": _parse(_landController),
-
-        // Client requirement
-        "g2": 20,
-        "g3": 25,
-      };
-
-      final response = await _dio.post(
-        "https://loan.edugaondev.com/api/v1/trade/one-year",
-        data: payload,
-        options: Options(
-          headers: {
-            "Authorization": "Bearer $token",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
+    if (result != null) {
+      final shouldClear = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OneYearResultScreen(resultData: result),
         ),
       );
 
-      if (!mounted) return;
-
-      if (response.statusCode == 200 &&
-          response.data["success"] == true) {
-        final result = Map<String, dynamic>.from(response.data);
-
-        debugPrint("FINAL RESULT => $result");
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OneYearResultScreen(
-              resultData: result,
-            ),
-          ),
-        );
-      } else {
-        _showMessage(
-          response.data["message"] ??
-              "Failed to generate report",
-        );
+      // Back aaya aur clear chahiye
+      if (shouldClear == true && mounted) {
+        _clearForm();
       }
-    } on DioException catch (e) {
-      if (!mounted) return;
-
-      String message = "Something went wrong";
-
-      if (e.response?.data is Map) {
-        final data = Map<String, dynamic>.from(
-          e.response!.data,
-        );
-
-        message =
-            data["message"] ??
-                "Failed to generate report";
-      } else if (e.message != null) {
-        message = e.message!;
-      }
-
-      _showMessage(message);
-    } catch (e) {
-      if (!mounted) return;
-
-      _showMessage(
-        "Failed to generate report: ${e.toString()}",
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    }
+    else if (provider.errorMessage != null) {
+      _showMessage(provider.errorMessage!);
     }
   }
 
+  void _clearForm() {
+    _salesController.clear();
+    _commissionController.clear();
+    _cashInHandController.clear();
+    _cashInBankController.clear();
+    _landController.clear();
+    _formKey.currentState?.reset();
+  }
   @override
   void dispose() {
     _salesController.dispose();
@@ -396,7 +132,7 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
-          "Financial Projection",
+          'Financial Projection',
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 18,
@@ -446,9 +182,7 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                             spreadRadius: -2,
                           ),
                         ],
-                        border: Border.all(
-                          color: _accent.withOpacity(0.15),
-                        ),
+                        border: Border.all(color: _accent.withOpacity(0.15)),
                       ),
                       child: Row(
                         children: [
@@ -465,8 +199,11 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                               ),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: const Icon(Icons.insights,
-                                color: _accent, size: 28),
+                            child: const Icon(
+                              Icons.insights,
+                              color: _accent,
+                              size: 28,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           const Expanded(
@@ -474,7 +211,7 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "3-Year Financial Projection",
+                                  '3-Year Financial Projection',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -484,9 +221,8 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  "Enter 5 key inputs to generate detailed projections",
-                                  style: TextStyle(
-                                      fontSize: 13, color: _hint),
+                                  'Enter 5 key inputs to generate detailed projections',
+                                  style: TextStyle(fontSize: 13, color: _hint),
                                 ),
                               ],
                             ),
@@ -496,20 +232,19 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                     ),
                     const SizedBox(height: 28),
 
-                    // Revenue Section
                     _buildSection(
-                      title: "Revenue",
+                      title: 'Revenue',
                       icon: Icons.currency_rupee,
                       children: [
                         _buildField(
-                          label: "Total Sales",
+                          label: 'Total Sales',
                           controller: _salesController,
                           icon: Icons.shopping_cart,
                           isRequired: true,
                         ),
                         const SizedBox(height: 16),
                         _buildField(
-                          label: "Commission Received",
+                          label: 'Commission Received',
                           controller: _commissionController,
                           icon: Icons.request_page,
                         ),
@@ -517,25 +252,24 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Assets Section
                     _buildSection(
-                      title: "Assets",
+                      title: 'Assets',
                       icon: Icons.account_balance_wallet,
                       children: [
                         _buildField(
-                          label: "Cash in Hand",
+                          label: 'Cash in Hand',
                           controller: _cashInHandController,
                           icon: Icons.wallet,
                         ),
                         const SizedBox(height: 16),
                         _buildField(
-                          label: "Cash in Bank",
+                          label: 'Cash in Bank',
                           controller: _cashInBankController,
                           icon: Icons.account_balance,
                         ),
                         const SizedBox(height: 16),
                         _buildField(
-                          label: "Land & Building",
+                          label: 'Land & Building',
                           controller: _landController,
                           icon: Icons.home_work,
                         ),
@@ -551,43 +285,46 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
               bottom: 20,
               left: 20,
               right: 20,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _generate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                  height: 22,
-                  width: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white,
-                    ),
-                  ),
-                )
-                    : const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.analytics, size: 20),
-                    SizedBox(width: 12),
-                    Text(
-                      "Generate 3-Year Report",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2,
+              child: Consumer<OneYearTradingProvider>(
+                builder: (context, provider, _) {
+                  return ElevatedButton(
+                    onPressed: provider.isLoading ? null : _generate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 0,
                     ),
-                  ],
-                ),
+                    child: provider.isLoading
+                        ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                        : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.analytics, size: 20),
+                        SizedBox(width: 12),
+                        Text(
+                          'Generate 3-Year Report',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -663,9 +400,10 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
               ),
             ),
             if (isRequired)
-              Text(" *",
-                  style: TextStyle(
-                      color: Colors.red.shade600, fontSize: 14)),
+              Text(
+                ' *',
+                style: TextStyle(color: Colors.red.shade600, fontSize: 14),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -674,13 +412,13 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
           keyboardType: TextInputType.number,
           inputFormatters: [ThousandSeparatorInputFormatter()],
           style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: _text),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: _text,
+          ),
           decoration: InputDecoration(
-            hintText: "Enter amount",
-            hintStyle: TextStyle(
-                color: _hint.withOpacity(0.6), fontSize: 14),
+            hintText: 'Enter amount',
+            hintStyle: TextStyle(color: _hint.withOpacity(0.6), fontSize: 14),
             prefixIcon: Icon(icon, color: _accent, size: 20),
             prefixText: '₹ ',
             prefixStyle: const TextStyle(
@@ -690,40 +428,34 @@ class _OneYearTradingScreenState extends State<OneYearTradingScreen> {
             ),
             filled: true,
             fillColor: const Color(0xFFF8FAFD),
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-              BorderSide(color: _hint.withOpacity(0.2)),
+              borderSide: BorderSide(color: _hint.withOpacity(0.2)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-              BorderSide(color: _hint.withOpacity(0.2)),
+              borderSide: BorderSide(color: _hint.withOpacity(0.2)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-              const BorderSide(color: _accent, width: 1.5),
+              borderSide: const BorderSide(color: _accent, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                  color: Colors.red.shade300, width: 1),
+              borderSide: BorderSide(color: Colors.red.shade300, width: 1),
             ),
           ),
           validator: (value) {
-            if (isRequired &&
-                (value == null || value.trim().isEmpty)) {
-              return "Required field";
+            if (isRequired && (value == null || value.trim().isEmpty)) {
+              return 'Required field';
             }
-            final cleaned =
-                value?.replaceAll(',', '') ?? '';
+            final cleaned = value?.replaceAll(',', '') ?? '';
             if (cleaned.isNotEmpty &&
                 (double.tryParse(cleaned) == null ||
                     double.parse(cleaned) < 0)) {
-              return "Invalid amount";
+              return 'Invalid amount';
             }
             return null;
           },

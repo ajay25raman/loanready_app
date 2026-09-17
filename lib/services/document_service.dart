@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -203,21 +204,42 @@ class DocumentService {
       debugPrint(
         '========== CREATE DOCUMENT =========',
       );
-
       debugPrint('URL => $url');
-      debugPrint('REQUEST => $requestBody');
 
-      final response = await http.post(
+      final stopwatch = Stopwatch()..start();
+
+      final response = await http
+          .post(
         url,
         headers: _headers(token),
         body: requestBody,
+      )
+          .timeout(
+        const Duration(seconds: 20),
+      );
+
+      stopwatch.stop();
+
+      debugPrint(
+        'CREATE DOCUMENT API TIME => '
+            '${stopwatch.elapsedMilliseconds} ms',
       );
 
       debugPrint(
-        '====================================',
+        'STATUS => ${response.statusCode}',
       );
 
       return await _handleResponse(response);
+    } on TimeoutException {
+      debugPrint(
+        'CREATE DOCUMENT TIMEOUT',
+      );
+
+      return {
+        'success': false,
+        'message':
+        'Server is taking too long. Please try again.',
+      };
     } catch (e) {
       debugPrint(
         'CREATE DOCUMENT ERROR => $e',
@@ -334,48 +356,104 @@ class DocumentService {
   // UPDATE
   // PUT /documents/:id
   // ============================================================
-
   Future<Map<String, dynamic>> updateDocuments(
-      dynamic documentId,
+      int userId,
       DocumentsModel docs,
       ) async {
-    final token = await _getToken();
-
-    if (token == null) {
-      return {
-        'success': false,
-        'message': 'Authentication token not found.',
-      };
-    }
-
     try {
-      final url = Uri.parse(
-        '$baseUrl/documents/$documentId',
-      );
+      final token =
+      await _storageService.getToken();
 
-      final requestBody = jsonEncode(
-        docs.toJson(),
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message':
+          'Authentication token not found.',
+        };
+      }
+
+      final url = Uri.parse(
+        '$baseUrl/documents/$userId',
       );
 
       debugPrint(
         '========== UPDATE DOCUMENT =========',
       );
-
-      debugPrint('ID => $documentId');
+      debugPrint('METHOD => PUT');
+      debugPrint('USER ID => $userId');
       debugPrint('URL => $url');
-      debugPrint('REQUEST => $requestBody');
+      debugPrint(
+        'BODY => ${docs.toJson()}',
+      );
 
-      final response = await http.put(
+      final response = await http
+          .put(
         url,
-        headers: _headers(token),
-        body: requestBody,
+        headers: {
+          'Authorization':
+          'Bearer $token',
+          'Content-Type':
+          'application/json',
+          'Accept':
+          'application/json',
+        },
+        body: jsonEncode(
+          docs.toJson(),
+        ),
+      )
+          .timeout(
+        const Duration(seconds: 20),
       );
 
       debugPrint(
-        '====================================',
+        'UPDATE STATUS => ${response.statusCode}',
       );
 
-      return await _handleResponse(response);
+      debugPrint(
+        'UPDATE RESPONSE => ${response.body}',
+      );
+
+      final decoded =
+      jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        if (response.statusCode == 401) {
+          await _storageService.clearToken();
+
+          return {
+            'success': false,
+            'message':
+            'Session expired. Please login again.',
+            'isUnauthorized': true,
+          };
+        }
+
+        if (response.statusCode >= 200 &&
+            response.statusCode < 300 &&
+            decoded['success'] == true) {
+          return decoded;
+        }
+
+        return {
+          ...decoded,
+          'success': false,
+          'message':
+          decoded['message']?.toString() ??
+              'Failed to update documents.',
+        };
+      }
+
+      return {
+        'success': false,
+        'message':
+        'Invalid server response.',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message':
+        'Document update timed out.',
+      };
     } catch (e) {
       debugPrint(
         'UPDATE DOCUMENT ERROR => $e',
@@ -384,11 +462,10 @@ class DocumentService {
       return {
         'success': false,
         'message':
-        'Unable to connect to server. Please try again.',
+        'Failed to update documents.',
       };
     }
   }
-
   // ============================================================
   // PATCH UPDATE
   // PATCH /documents/:id

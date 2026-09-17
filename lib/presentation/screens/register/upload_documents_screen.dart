@@ -15,6 +15,10 @@ class _UploadDocumentsScreenState
     extends State<UploadDocumentsScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // =============================================================
+  // VALIDATION
+  // =============================================================
+
   String? _validatePan(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'PAN number is required';
@@ -48,11 +52,17 @@ class _UploadDocumentsScreenState
     return null;
   }
 
+  // =============================================================
+  // SNACKBAR
+  // =============================================================
+
   void _showSnackBar(
       BuildContext context,
       String message,
       bool isSuccess,
       ) {
+    if (!context.mounted) return;
+
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -62,6 +72,9 @@ class _UploadDocumentsScreenState
           isSuccess ? Colors.green : Colors.red,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
+          duration: const Duration(
+            milliseconds: 900,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -69,18 +82,117 @@ class _UploadDocumentsScreenState
       );
   }
 
+  // =============================================================
+  // INIT
+  // =============================================================
+
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // Fetch existing uploaded documents only once.
+    // This is required so previously uploaded documents
+    // show as "Uploaded" when the screen opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      await context
+      context
           .read<DocumentProvider>()
           .fetchDocuments();
     });
   }
+
+  // =============================================================
+  // SUBMIT DOCUMENTS
+  // =============================================================
+
+  Future<void> _submitDocuments(
+      BuildContext context,
+      DocumentProvider provider,
+      ) async {
+    if (provider.isLoading) return;
+
+    FocusScope.of(context).unfocus();
+
+    // ----------------------------------------------------------
+    // VALIDATION
+    // ----------------------------------------------------------
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // REQUIRED DOCUMENTS
+    // ----------------------------------------------------------
+
+    if (!provider.isPanUploaded) {
+      _showSnackBar(
+        context,
+        'Please upload PAN Card.',
+        false,
+      );
+      return;
+    }
+
+    if (!provider.isAadhaarUploaded) {
+      _showSnackBar(
+        context,
+        'Please upload Aadhaar Card.',
+        false,
+      );
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // ONE CREATE API CALL
+    // ----------------------------------------------------------
+
+    final result = await provider.saveDocuments();
+
+    if (!context.mounted) return;
+
+    // ----------------------------------------------------------
+    // SUCCESS
+    // ----------------------------------------------------------
+
+    if (result['success'] == true) {
+      _showSnackBar(
+        context,
+        result['message']?.toString() ??
+            'Documents submitted successfully!',
+        true,
+      );
+
+      await Future.delayed(
+        const Duration(milliseconds: 700),
+      );
+
+      if (!context.mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+            (route) => false,
+      );
+
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // ERROR
+    // ----------------------------------------------------------
+
+    _showSnackBar(
+      context,
+      result['message']?.toString() ??
+          'Failed to save documents.',
+      false,
+    );
+  }
+  // =============================================================
+  // BUILD
+  // =============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +200,12 @@ class _UploadDocumentsScreenState
     context.watch<DocumentProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
+      backgroundColor:
+      const Color(0xFFF8F9FC),
+
+      // =========================================================
+      // APP BAR
+      // =========================================================
 
       appBar: AppBar(
         title: const Text(
@@ -99,7 +216,8 @@ class _UploadDocumentsScreenState
             color: Color(0xFF1E293B),
           ),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor:
+        const Color(0xFFF8F9FC),
         elevation: 0,
         centerTitle: true,
 
@@ -109,13 +227,20 @@ class _UploadDocumentsScreenState
             color: Color(0xFF1E293B),
             size: 20,
           ),
-          onPressed: () =>
-              Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
       ),
 
+      // =========================================================
+      // BODY
+      // =========================================================
+
       body: SafeArea(
         child: SingleChildScrollView(
+          keyboardDismissBehavior:
+          ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(
             20,
             10,
@@ -170,9 +295,7 @@ class _UploadDocumentsScreenState
                       Expanded(
                         child: ClipRRect(
                           borderRadius:
-                          BorderRadius.circular(
-                            12,
-                          ),
+                          BorderRadius.circular(12),
                           child:
                           const LinearProgressIndicator(
                             value: 1.0,
@@ -185,7 +308,9 @@ class _UploadDocumentsScreenState
                         ),
                       ),
 
-                      const SizedBox(width: 16),
+                      const SizedBox(
+                        width: 16,
+                      ),
 
                       Container(
                         padding:
@@ -198,9 +323,7 @@ class _UploadDocumentsScreenState
                             0xFFC9A227,
                           ).withAlpha(25),
                           borderRadius:
-                          BorderRadius.circular(
-                            30,
-                          ),
+                          BorderRadius.circular(30),
                         ),
                         child: const Text(
                           'Step 3/3',
@@ -263,8 +386,10 @@ class _UploadDocumentsScreenState
                   TextCapitalization.characters,
                   decoration:
                   _inputDecoration(
-                    label: 'PAN Number*',
-                    hint: 'ABCDE1234F',
+                    label:
+                    'PAN Number*',
+                    hint:
+                    'ABCDE1234F',
                     icon:
                     Icons.credit_card_rounded,
                   ),
@@ -338,8 +463,13 @@ class _UploadDocumentsScreenState
 
                 const SizedBox(height: 12),
 
+                // -------------------------------------------------
+                // SHOP LICENSE
+                // -------------------------------------------------
+
                 _buildDocTile(
-                  title: 'Shop License',
+                  title:
+                  'Shop License',
                   subtitle:
                   provider.isShopLicenseUploaded
                       ? (provider.shopLicenseName ??
@@ -362,6 +492,10 @@ class _UploadDocumentsScreenState
                 ),
 
                 const SizedBox(height: 10),
+
+                // -------------------------------------------------
+                // GST
+                // -------------------------------------------------
 
                 _buildDocTile(
                   title:
@@ -390,6 +524,10 @@ class _UploadDocumentsScreenState
                 ),
 
                 const SizedBox(height: 10),
+
+                // -------------------------------------------------
+                // BUSINESS PROOF
+                // -------------------------------------------------
 
                 _buildDocTile(
                   title:
@@ -420,123 +558,34 @@ class _UploadDocumentsScreenState
                 const SizedBox(height: 36),
 
                 // =================================================
-                // SUBMIT
+                // SUBMIT BUTTON
                 // =================================================
 
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    style:
-                    ElevatedButton.styleFrom(
-                      backgroundColor:
-                      const Color(
-                        0xFFC9A227,
-                      ),
-                      foregroundColor:
-                      Colors.white,
-                      elevation: 3,
-                      shape:
-                      RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(
-                          30,
-                        ),
-                      ),
-                    ),
-
-                    onPressed:
-                    provider.isLoading
+                    onPressed: provider.isLoading
                         ? null
-                        : () async {
-                      FocusScope.of(
-                        context,
-                      ).unfocus();
-
-                      if (!_formKey
-                          .currentState!
-                          .validate()) {
-                        return;
-                      }
-
-                      // IMPORTANT:
-                      // Server URL OR local path
-                      if (!provider
-                          .isPanUploaded ||
-                          !provider
-                              .isAadhaarUploaded) {
-                        _showSnackBar(
-                          context,
-                          'Please upload PAN and Aadhaar documents.',
-                          false,
-                        );
-                        return;
-                      }
-
-                      final res =
-                      await provider
-                          .saveDocuments();
-
-                      if (!context.mounted) {
-                        return;
-                      }
-
-                      final success =
-                          res['success'] ==
-                              true;
-
-                      if (success) {
-                        // Refresh server data
-                        await provider
-                            .fetchDocuments();
-
-                        if (!context
-                            .mounted) {
-                          return;
-                        }
-
-                        _showSnackBar(
-                          context,
-                          res['message'] ??
-                              'Documents submitted successfully!',
-                          true,
-                        );
-
-                        await Future.delayed(
-                          const Duration(
-                            milliseconds:
-                            500,
-                          ),
-                        );
-
-                        if (!context
-                            .mounted) {
-                          return;
-                        }
-
-                        Navigator
-                            .pushNamedAndRemoveUntil(
-                          context,
-                          AppRoutes.home,
-                              (route) =>
-                          false,
-                        );
-                      } else {
-                        _showSnackBar(
-                          context,
-                          res['message'] ??
-                              'Failed to save documents.',
-                          false,
-                        );
-                      }
-                    },
-
+                        : () => _submitDocuments(
+                      context,
+                      provider,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFC9A227),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                      const Color(0xFFC9A227).withOpacity(0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
                     child: provider.isLoading
                         ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child:
-                      CircularProgressIndicator(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
                         color: Colors.white,
                         strokeWidth: 2.5,
                       ),
@@ -545,12 +594,11 @@ class _UploadDocumentsScreenState
                       'Submit Documents',
                       style: TextStyle(
                         fontSize: 17,
-                        fontWeight:
-                        FontWeight.w700,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                ),
+                )
               ],
             ),
           ),
@@ -590,19 +638,15 @@ class _UploadDocumentsScreenState
       onTap: onTap,
       borderRadius:
       BorderRadius.circular(16),
-
       child: Container(
         padding:
         const EdgeInsets.all(16),
-
         decoration: BoxDecoration(
           color: isUploaded
               ? const Color(0xFFF0FDF4)
               : Colors.white,
-
           borderRadius:
           BorderRadius.circular(16),
-
           border: Border.all(
             color: isUploaded
                 ? Colors.green.shade300
@@ -610,13 +654,11 @@ class _UploadDocumentsScreenState
             width: 1.2,
           ),
         ),
-
         child: Row(
           children: [
             Container(
               padding:
               const EdgeInsets.all(10),
-
               decoration: BoxDecoration(
                 color: isUploaded
                     ? Colors.green.shade100
@@ -625,7 +667,6 @@ class _UploadDocumentsScreenState
                 ).withAlpha(20),
                 shape: BoxShape.circle,
               ),
-
               child: Icon(
                 isUploaded
                     ? Icons
@@ -690,7 +731,8 @@ class _UploadDocumentsScreenState
                       color: isUploaded
                           ? Colors
                           .green.shade700
-                          : Colors.red.shade700,
+                          : Colors
+                          .red.shade700,
                     ),
                   ),
                 ],
@@ -754,8 +796,7 @@ class _UploadDocumentsScreenState
         borderRadius:
         BorderRadius.circular(16),
         borderSide: BorderSide(
-          color:
-          Colors.grey.shade300,
+          color: Colors.grey.shade300,
           width: 1.2,
         ),
       ),
@@ -766,7 +807,8 @@ class _UploadDocumentsScreenState
         BorderRadius.circular(16),
         borderSide:
         const BorderSide(
-          color: Color(0xFFC9A227),
+          color:
+          Color(0xFFC9A227),
           width: 2,
         ),
       ),
@@ -777,7 +819,8 @@ class _UploadDocumentsScreenState
         BorderRadius.circular(16),
         borderSide:
         const BorderSide(
-          color: Colors.redAccent,
+          color:
+          Colors.redAccent,
           width: 1.2,
         ),
       ),

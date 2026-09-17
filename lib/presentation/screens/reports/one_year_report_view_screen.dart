@@ -25,6 +25,7 @@ class _OneYearReportViewScreenState
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context
           .read<OneYearReportProvider>()
           .fetchReportById(widget.reportId);
@@ -34,12 +35,10 @@ class _OneYearReportViewScreenState
   double numValue(dynamic value) {
     return double.tryParse(value?.toString() ?? '') ?? 0;
   }
-  Future<void> _downloadPdf(
-      Map<String, dynamic> report,
-      ) async {
+
+  Future<void> _downloadPdf(Map<String, dynamic> report) async {
     try {
-      final path =
-      await FinancialReportPdfService.downloadPdf(
+      final path = await FinancialReportPdfService.downloadPdf(
         report: report,
         reportId: widget.reportId,
       );
@@ -49,28 +48,19 @@ class _OneYearReportViewScreenState
       if (path != null && path.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'PDF downloaded successfully',
-            ),
+            content: Text('PDF downloaded successfully'),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'PDF download failed: $e',
-          ),
-        ),
+        SnackBar(content: Text('PDF download failed: $e')),
       );
     }
   }
 
-  Future<void> _sharePdf(
-      Map<String, dynamic> report,
-      ) async {
+  Future<void> _sharePdf(Map<String, dynamic> report) async {
     try {
       await FinancialReportPdfService.sharePdf(
         report: report,
@@ -78,65 +68,52 @@ class _OneYearReportViewScreenState
       );
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'PDF share failed: $e',
-          ),
-        ),
+        SnackBar(content: Text('PDF share failed: $e')),
       );
     }
   }
 
   String money(dynamic value) {
     final amount = numValue(value);
-
     return '₹${amount.toStringAsFixed(0)}';
   }
 
-  String formatDate(dynamic value) {
-    if (value == null) return '-';
-
-    final date = DateTime.tryParse(value.toString());
-
-    if (date == null) return '-';
-
-    final month = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ][date.month - 1];
-
-    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
-
-    final minute = date.minute.toString().padLeft(2, '0');
-
-    final period = date.hour >= 12 ? 'PM' : 'AM';
-
-    return '${date.day} $month ${date.year}, '
-        '$hour:$minute $period';
+  Map<String, dynamic> mapValue(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return {};
   }
 
-  Map<String, dynamic> mapValue(dynamic value) {
-    if (value is Map<String, dynamic>) {
-      return value;
+  String _getFriendlyError(String? error) {
+    if (error == null || error.isEmpty) {
+      return 'Unable to load report.\nPlease try again.';
     }
 
-    if (value is Map) {
-      return Map<String, dynamic>.from(value);
+    final msg = error.toLowerCase();
+
+    if (msg.contains('no_internet') ||
+        msg.contains('socket') ||
+        msg.contains('network')) {
+      return 'No Internet Connection.\nPlease check your network.';
     }
 
-    return {};
+    if (msg.contains('timeout') || msg.contains('request_timeout')) {
+      return 'Request timed out.\nPlease try again.';
+    }
+
+    if (msg.contains('session_expired') || msg.contains('401')) {
+      return 'Session expired.\nPlease login again.';
+    }
+
+    if (msg.contains('server_error') ||
+        msg.contains('500') ||
+        msg.contains('502') ||
+        msg.contains('503')) {
+      return 'Server is temporarily unavailable.\nPlease try again later.';
+    }
+
+    return 'Unable to load report.\nPlease try again.';
   }
 
   @override
@@ -148,7 +125,6 @@ class _OneYearReportViewScreenState
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-
         leading: IconButton(
           tooltip: 'Back',
           icon: const Icon(
@@ -156,11 +132,8 @@ class _OneYearReportViewScreenState
             size: 24,
             color: Color(0xFF0B1628),
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
-
         title: const Text(
           'Financial Report',
           style: TextStyle(
@@ -169,60 +142,52 @@ class _OneYearReportViewScreenState
             fontWeight: FontWeight.w700,
           ),
         ),
-
         actions: [
           IconButton(
             tooltip: 'Download PDF',
             onPressed: () {
-              final report = context
-                  .read<OneYearReportProvider>()
-                  .selectedReport;
-
-              if (report != null) {
-                _downloadPdf(report);
-              }
+              final report =
+                  context.read<OneYearReportProvider>().selectedReport;
+              if (report != null) _downloadPdf(report);
             },
             icon: const Icon(
               Icons.download_outlined,
               color: Color(0xFF0B1628),
             ),
           ),
-
           IconButton(
             tooltip: 'Share',
             onPressed: () {
-              final report = context
-                  .read<OneYearReportProvider>()
-                  .selectedReport;
-
-              if (report != null) {
-                _sharePdf(report);
-              }
+              final report =
+                  context.read<OneYearReportProvider>().selectedReport;
+              if (report != null) _sharePdf(report);
             },
             icon: const Icon(
               Icons.share_outlined,
               color: Color(0xFF0B1628),
             ),
           ),
-
           const SizedBox(width: 6),
         ],
       ),
       body: Consumer<OneYearReportProvider>(
         builder: (context, provider, child) {
-          if (provider.isViewLoading) {
+          // Pehle se data hai to full loader mat dikhao
+          final bool showFullLoader =
+              provider.isViewLoading && provider.selectedReport == null;
+
+          if (showFullLoader) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
-          if (provider.errorMessage != null) {
+          if (provider.errorMessage != null &&
+              provider.selectedReport == null) {
             return _ErrorView(
-              message: provider.errorMessage!,
+              message: _getFriendlyError(provider.errorMessage),
               onRetry: () {
-                provider.fetchReportById(
-                  widget.reportId,
-                );
+                provider.fetchReportById(widget.reportId);
               },
             );
           }
@@ -233,37 +198,29 @@ class _OneYearReportViewScreenState
             return const Center(
               child: Text(
                 'No report available',
-                style: TextStyle(
-                  fontSize: 16,
-                ),
+                style: TextStyle(fontSize: 16),
               ),
             );
           }
 
-          final firstYear = mapValue(
-            response['firstYear'],
-          );
+          final firstYear = mapValue(response['firstYear']);
+          final secondYear = mapValue(response['secondYear']);
+          final thirdYear = mapValue(response['thirdYear']);
 
-          final secondYear = mapValue(
-            response['secondYear'],
-          );
-
-          final thirdYear = mapValue(
-            response['thirdYear'],
-          );
-
-          final years = [
-            firstYear,
-            secondYear,
-            thirdYear,
-          ];
-
+          final years = [firstYear, secondYear, thirdYear];
           final selectedData = years[selectedYear];
-
           final createdAt = response['createdAt'];
 
           return Column(
             children: [
+              // Refresh hone pe thin progress bar
+              if (provider.isViewLoading)
+                const LinearProgressIndicator(
+                  minHeight: 2,
+                  backgroundColor: Color(0xFFE8EAF0),
+                  color: Color(0xFF0B1628),
+                ),
+
               _ReportHeader(
                 reportId: widget.reportId,
                 createdAt: createdAt,
@@ -272,36 +229,24 @@ class _OneYearReportViewScreenState
               _YearTabs(
                 selectedYear: selectedYear,
                 onChanged: (index) {
-                  setState(() {
-                    selectedYear = index;
-                  });
+                  setState(() => selectedYear = index);
                 },
               ),
 
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    12,
-                    16,
-                    30,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
                   children: [
                     if (selectedData.isEmpty)
                       const Padding(
-                        padding: EdgeInsets.only(
-                          top: 100,
-                        ),
+                        padding: EdgeInsets.only(top: 100),
                         child: Center(
-                          child: Text(
-                            'No data available for this year',
-                          ),
+                          child: Text('No data available for this year'),
                         ),
                       )
                     else
                       _YearSection(
-                        title:
-                        'Year ${selectedYear + 1}',
+                        title: 'Year ${selectedYear + 1}',
                         yearData: selectedData,
                         money: money,
                       ),
@@ -309,28 +254,8 @@ class _OneYearReportViewScreenState
                     const SizedBox(height: 18),
 
                     _PdfButtons(
-                      onDownload: () {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'PDF download will be available here',
-                            ),
-                          ),
-                        );
-                      },
-                      onShare: () {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'PDF share will be available here',
-                            ),
-                          ),
-                        );
-                      },
+                      onDownload: () => _downloadPdf(response),
+                      onShare: () => _sharePdf(response),
                     ),
                   ],
                 ),
@@ -359,25 +284,12 @@ class _ReportHeader extends StatelessWidget {
   String formatDate(dynamic value) {
     if (value == null) return '-';
 
-    final date = DateTime.tryParse(
-      value.toString(),
-    );
-
+    final date = DateTime.tryParse(value.toString());
     if (date == null) return '-';
 
     final month = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ][date.month - 1];
 
     return '${date.day} $month ${date.year}';
@@ -386,19 +298,12 @@ class _ReportHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(
-        16,
-        14,
-        16,
-        10,
-      ),
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE6E9EF),
-        ),
+        border: Border.all(color: const Color(0xFFE6E9EF)),
       ),
       child: Row(
         children: [
@@ -415,34 +320,20 @@ class _ReportHeader extends StatelessWidget {
               size: 23,
             ),
           ),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Text(
-                //   'Report #$reportId',
-                //   style: const TextStyle(
-                //     fontSize: 16,
-                //     fontWeight: FontWeight.w700,
-                //     color: Color(0xFF0B1628),
-                //   ),
-                // ),
-
-                Text(
+                const Text(
                   'Report',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF0B1628),
                   ),
                 ),
-
                 const SizedBox(height: 4),
-
                 Text(
                   'Created ${formatDate(createdAt)}',
                   style: TextStyle(
@@ -453,12 +344,8 @@ class _ReportHeader extends StatelessWidget {
               ],
             ),
           ),
-
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: const Color(0xFFEAF8EE),
               borderRadius: BorderRadius.circular(20),
@@ -520,13 +407,9 @@ class _YearTabs extends StatelessWidget {
               onTap: () => onChanged(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 11,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 11),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? Colors.white
-                      : Colors.transparent,
+                  color: selected ? Colors.white : Colors.transparent,
                   borderRadius: BorderRadius.circular(9),
                   boxShadow: selected
                       ? [
@@ -558,9 +441,8 @@ class _YearTabs extends StatelessWidget {
                             ? const Color(0xFF1649E8)
                             : Colors.grey.shade700,
                         fontSize: 13,
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+                        fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
                   ],
@@ -575,7 +457,7 @@ class _YearTabs extends StatelessWidget {
 }
 
 // ============================================================
-// YEAR SECTION
+// YEAR SECTION + CARDS (same as before)
 // ============================================================
 
 class _YearSection extends StatelessWidget {
@@ -590,69 +472,29 @@ class _YearSection extends StatelessWidget {
   });
 
   Map<String, dynamic> mapValue(dynamic value) {
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-
-    if (value is Map) {
-      return Map<String, dynamic>.from(value);
-    }
-
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
     return {};
   }
 
   @override
   Widget build(BuildContext context) {
-    final pl = mapValue(
-      yearData['pl'],
-    );
-
-    final profitLoss = mapValue(
-      pl['profitLoss'],
-    );
-
-    final tradingContainer = mapValue(
-      yearData['oneYearTrading'],
-    );
-
-    final trading = mapValue(
-      tradingContainer['yearOne'],
-    );
-
-    final balanceContainer = mapValue(
-      yearData['balanceSheet'],
-    );
-
-    final balance = mapValue(
-      balanceContainer['bs'],
-    );
-
-    final assets = mapValue(
-      balance['assets'],
-    );
-
-    final liabilities = mapValue(
-      balance['liabilities'],
-    );
+    final pl = mapValue(yearData['pl']);
+    final profitLoss = mapValue(pl['profitLoss']);
+    final tradingContainer = mapValue(yearData['oneYearTrading']);
+    final trading = mapValue(tradingContainer['yearOne']);
+    final balanceContainer = mapValue(yearData['balanceSheet']);
+    final balance = mapValue(balanceContainer['bs']);
+    final assets = mapValue(balance['assets']);
+    final liabilities = mapValue(balance['liabilities']);
 
     return Column(
-      crossAxisAlignment:
-      CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TradingAccountCard(
-          trading: trading,
-          money: money,
-        ),
-
+        _TradingAccountCard(trading: trading, money: money),
         const SizedBox(height: 12),
-
-        _ProfitLossCard(
-          profitLoss: profitLoss,
-          money: money,
-        ),
-
+        _ProfitLossCard(profitLoss: profitLoss, money: money),
         const SizedBox(height: 12),
-
         _BalanceSheetCard(
           assets: assets,
           liabilities: liabilities,
@@ -663,10 +505,6 @@ class _YearSection extends StatelessWidget {
     );
   }
 }
-
-// ============================================================
-// TRADING ACCOUNT
-// ============================================================
 
 class _TradingAccountCard extends StatelessWidget {
   final Map<String, dynamic> trading;
@@ -684,126 +522,36 @@ class _TradingAccountCard extends StatelessWidget {
       title: 'Trading Account',
       initiallyExpanded: true,
       children: [
-        _SummaryRow(
-          title: 'Opening Stock',
-          value: money(
-            trading['openingStock'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Purchases',
-          value: money(
-            trading['purchases'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Less: Purchase Return',
-          value: money(
-            trading['lessReturn'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Carriage Inwards',
-          value: money(
-            trading['carriageInwards'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Cartage',
-          value: money(
-            trading['cartage'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Dock Charges',
-          value: money(
-            trading['dockCharges'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Wages',
-          value: money(
-            trading['wages'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Duty',
-          value: money(
-            trading['duty'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Freight',
-          value: money(
-            trading['freight'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Clearing Charges',
-          value: money(
-            trading['ClearingCharges'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Other Expenses',
-          value: money(
-            trading['otherExpenses'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Opening Stock', value: money(trading['openingStock'])),
+        _SummaryRow(title: 'Purchases', value: money(trading['purchases'])),
+        _SummaryRow(title: 'Less: Purchase Return', value: money(trading['lessReturn'])),
+        _SummaryRow(title: 'Carriage Inwards', value: money(trading['carriageInwards'])),
+        _SummaryRow(title: 'Cartage', value: money(trading['cartage'])),
+        _SummaryRow(title: 'Dock Charges', value: money(trading['dockCharges'])),
+        _SummaryRow(title: 'Wages', value: money(trading['wages'])),
+        _SummaryRow(title: 'Duty', value: money(trading['duty'])),
+        _SummaryRow(title: 'Freight', value: money(trading['freight'])),
+        _SummaryRow(title: 'Clearing Charges', value: money(trading['ClearingCharges'])),
+        _SummaryRow(title: 'Other Expenses', value: money(trading['otherExpenses'])),
         _SummaryRow(
           title: 'Gross Profit',
-          value: money(
-            trading['grossProfitLoss'],
-          ),
+          value: money(trading['grossProfitLoss']),
           valueColor: Colors.green,
           bold: true,
         ),
-
-        _SummaryRow(
-          title: 'Closing Stock',
-          value: money(
-            trading['closingStock'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Closing Stock', value: money(trading['closingStock'])),
         const Divider(height: 20),
-
-        _SummaryRow(
-          title: 'Sales',
-          value: money(
-            trading['sales'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Sales', value: money(trading['sales'])),
         _SummaryRow(
           title: 'Total',
-          value: money(
-            trading['totalIncome'],
-          ),
-          valueColor: const Color(
-            0xFF1649E8,
-          ),
+          value: money(trading['totalIncome']),
+          valueColor: const Color(0xFF1649E8),
           bold: true,
         ),
       ],
     );
   }
 }
-
-// ============================================================
-// PROFIT LOSS
-// ============================================================
 
 class _ProfitLossCard extends StatelessWidget {
   final Map<String, dynamic> profitLoss;
@@ -821,173 +569,47 @@ class _ProfitLossCard extends StatelessWidget {
       title: 'Profit & Loss Account',
       initiallyExpanded: false,
       children: [
-        _SummaryRow(
-          title: 'Salaries',
-          value: money(
-            profitLoss['salaries'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Rent',
-          value: money(
-            profitLoss['rent'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Discount Allowed',
-          value: money(
-            profitLoss['discountAllowed'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Commission Paid',
-          value: money(
-            profitLoss['commissionPaid'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Insurance',
-          value: money(
-            profitLoss['insurance'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Bank Charges',
-          value: money(
-            profitLoss['bankCharges'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Legal Charges',
-          value: money(
-            profitLoss['legalCharges'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Repairs',
-          value: money(
-            profitLoss['repairs'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Advertising',
-          value: money(
-            profitLoss['advertising'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Trade Expenses',
-          value: money(
-            profitLoss['tradeExpenses'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Office Expenses',
-          value: money(
-            profitLoss['officeExpenses'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Bad Debts',
-          value: money(
-            profitLoss['badDebts'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Travelling Expenses',
-          value: money(
-            profitLoss['travellingExpenses'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Selling & Distribution',
-          value: money(
-            profitLoss['sellingAndDistribution'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Salaries', value: money(profitLoss['salaries'])),
+        _SummaryRow(title: 'Rent', value: money(profitLoss['rent'])),
+        _SummaryRow(title: 'Discount Allowed', value: money(profitLoss['discountAllowed'])),
+        _SummaryRow(title: 'Commission Paid', value: money(profitLoss['commissionPaid'])),
+        _SummaryRow(title: 'Insurance', value: money(profitLoss['insurance'])),
+        _SummaryRow(title: 'Bank Charges', value: money(profitLoss['bankCharges'])),
+        _SummaryRow(title: 'Legal Charges', value: money(profitLoss['legalCharges'])),
+        _SummaryRow(title: 'Repairs', value: money(profitLoss['repairs'])),
+        _SummaryRow(title: 'Advertising', value: money(profitLoss['advertising'])),
+        _SummaryRow(title: 'Trade Expenses', value: money(profitLoss['tradeExpenses'])),
+        _SummaryRow(title: 'Office Expenses', value: money(profitLoss['officeExpenses'])),
+        _SummaryRow(title: 'Bad Debts', value: money(profitLoss['badDebts'])),
+        _SummaryRow(title: 'Travelling Expenses', value: money(profitLoss['travellingExpenses'])),
+        _SummaryRow(title: 'Selling & Distribution', value: money(profitLoss['sellingAndDistribution'])),
         const Divider(height: 20),
-
-        _SummaryRow(
-          title: 'Gross Profit b/f',
-          value: money(
-            profitLoss['grossProfitBf'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Interest Received',
-          value: money(
-            profitLoss['interestReceived'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Discount Received',
-          value: money(
-            profitLoss['discountReceived'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Gross Profit b/f', value: money(profitLoss['grossProfitBf'])),
+        _SummaryRow(title: 'Interest Received', value: money(profitLoss['interestReceived'])),
+        _SummaryRow(title: 'Discount Received', value: money(profitLoss['discountReceived'])),
         _SummaryRow(
           title: 'Commission Received',
-          value: money(
-            profitLoss['commissionReceived'],
-          ),
+          value: money(profitLoss['commissionReceived']),
           valueColor: Colors.green,
         ),
-
-        _SummaryRow(
-          title: 'Other Receipts',
-          value: money(
-            profitLoss['otherReceipts'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Other Receipts', value: money(profitLoss['otherReceipts'])),
         const Divider(height: 20),
-
         _SummaryRow(
           title: 'Net Profit',
-          value: money(
-            profitLoss['netProfit'],
-          ),
-          valueColor: const Color(
-            0xFF1649E8,
-          ),
+          value: money(profitLoss['netProfit']),
+          valueColor: const Color(0xFF1649E8),
           bold: true,
         ),
-
         _SummaryRow(
           title: 'Total',
-          value: money(
-            profitLoss['plTotalIncome'],
-          ),
-          valueColor: const Color(
-            0xFF1649E8,
-          ),
+          value: money(profitLoss['plTotalIncome']),
+          valueColor: const Color(0xFF1649E8),
           bold: true,
         ),
       ],
     );
   }
 }
-
-// ============================================================
-// BALANCE SHEET
-// ============================================================
 
 class _BalanceSheetCard extends StatelessWidget {
   final Map<String, dynamic> assets;
@@ -1010,10 +632,7 @@ class _BalanceSheetCard extends StatelessWidget {
       initiallyExpanded: false,
       children: [
         const Padding(
-          padding: EdgeInsets.only(
-            top: 4,
-            bottom: 8,
-          ),
+          padding: EdgeInsets.only(top: 4, bottom: 8),
           child: Text(
             'Assets',
             style: TextStyle(
@@ -1023,75 +642,23 @@ class _BalanceSheetCard extends StatelessWidget {
             ),
           ),
         ),
-
-        _SummaryRow(
-          title: 'Cash in Hand',
-          value: money(
-            assets['cashInHand'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Cash at Bank',
-          value: money(
-            assets['cashAtBank'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Bills Receivable',
-          value: money(
-            assets['billsReceivable'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Stock',
-          value: money(
-            assets['stock'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Land & Building',
-          value: money(
-            assets['landAndBuilding'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Office Building',
-          value: money(
-            assets['officeBuilding'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Office Equipment',
-          value: money(
-            assets['officeEquipment'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Cash in Hand', value: money(assets['cashInHand'])),
+        _SummaryRow(title: 'Cash at Bank', value: money(assets['cashAtBank'])),
+        _SummaryRow(title: 'Bills Receivable', value: money(assets['billsReceivable'])),
+        _SummaryRow(title: 'Stock', value: money(assets['stock'])),
+        _SummaryRow(title: 'Land & Building', value: money(assets['landAndBuilding'])),
+        _SummaryRow(title: 'Office Building', value: money(assets['officeBuilding'])),
+        _SummaryRow(title: 'Office Equipment', value: money(assets['officeEquipment'])),
         const Divider(height: 20),
-
         _SummaryRow(
           title: 'Total Assets',
-          value: money(
-            balanceSheet['totalAssets'],
-          ),
-          valueColor: const Color(
-            0xFF1649E8,
-          ),
+          value: money(balanceSheet['totalAssets']),
+          valueColor: const Color(0xFF1649E8),
           bold: true,
         ),
-
         const SizedBox(height: 12),
-
         const Padding(
-          padding: EdgeInsets.only(
-            bottom: 8,
-          ),
+          padding: EdgeInsets.only(bottom: 8),
           child: Text(
             'Liabilities',
             style: TextStyle(
@@ -1101,38 +668,14 @@ class _BalanceSheetCard extends StatelessWidget {
             ),
           ),
         ),
-
-        _SummaryRow(
-          title: 'Bills Payable',
-          value: money(
-            liabilities['billsPayable'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Capital',
-          value: money(
-            liabilities['capital'],
-          ),
-        ),
-
-        _SummaryRow(
-          title: 'Net Profit',
-          value: money(
-            liabilities['netProfit'],
-          ),
-        ),
-
+        _SummaryRow(title: 'Bills Payable', value: money(liabilities['billsPayable'])),
+        _SummaryRow(title: 'Capital', value: money(liabilities['capital'])),
+        _SummaryRow(title: 'Net Profit', value: money(liabilities['netProfit'])),
         const Divider(height: 20),
-
         _SummaryRow(
           title: 'Total Liabilities',
-          value: money(
-            balanceSheet['totalLiabilities'],
-          ),
-          valueColor: const Color(
-            0xFF1649E8,
-          ),
+          value: money(balanceSheet['totalLiabilities']),
+          valueColor: const Color(0xFF1649E8),
           bold: true,
         ),
       ],
@@ -1141,7 +684,7 @@ class _BalanceSheetCard extends StatelessWidget {
 }
 
 // ============================================================
-// EXPANDABLE CARD
+// EXPANDABLE CARD + SUMMARY ROW + PDF BUTTONS + ERROR VIEW
 // ============================================================
 
 class _ExpandableCard extends StatefulWidget {
@@ -1158,12 +701,10 @@ class _ExpandableCard extends StatefulWidget {
   });
 
   @override
-  State<_ExpandableCard> createState() =>
-      _ExpandableCardState();
+  State<_ExpandableCard> createState() => _ExpandableCardState();
 }
 
-class _ExpandableCardState
-    extends State<_ExpandableCard> {
+class _ExpandableCardState extends State<_ExpandableCard> {
   late bool expanded;
 
   @override
@@ -1177,47 +718,26 @@ class _ExpandableCardState
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius:
-        BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFFE3E6ED),
-        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE3E6ED)),
       ),
       child: Column(
         children: [
           InkWell(
-            onTap: () {
-              setState(() {
-                expanded = !expanded;
-              });
-            },
-            borderRadius:
-            BorderRadius.circular(14),
+            onTap: () => setState(() => expanded = !expanded),
+            borderRadius: BorderRadius.circular(14),
             child: Padding(
-              padding:
-              const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 15,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
               child: Row(
                 children: [
-                  Icon(
-                    widget.icon,
-                    size: 22,
-                    color: const Color(
-                      0xFF172E90,
-                    ),
-                  ),
+                  Icon(widget.icon, size: 22, color: const Color(0xFF172E90)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       widget.title,
                       style: const TextStyle(
-                        color: Color(
-                          0xFF1236B7,
-                        ),
-                        fontWeight:
-                        FontWeight.w700,
+                        color: Color(0xFF1236B7),
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                       ),
                     ),
@@ -1231,29 +751,16 @@ class _ExpandableCardState
               ),
             ),
           ),
-
           if (expanded)
             Padding(
-              padding:
-              const EdgeInsets.fromLTRB(
-                14,
-                0,
-                14,
-                14,
-              ),
-              child: Column(
-                children: widget.children,
-              ),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(children: widget.children),
             ),
         ],
       ),
     );
   }
 }
-
-// ============================================================
-// SUMMARY ROW
-// ============================================================
 
 class _SummaryRow extends StatelessWidget {
   final String title;
@@ -1271,38 +778,27 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Expanded(
             child: Text(
               title,
               style: TextStyle(
-                color: bold
-                    ? const Color(0xFF0B1628)
-                    : Colors.grey.shade700,
+                color: bold ? const Color(0xFF0B1628) : Colors.grey.shade700,
                 fontSize: 13,
-                fontWeight: bold
-                    ? FontWeight.w600
-                    : FontWeight.w400,
+                fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),
-
           const SizedBox(width: 16),
-
           Text(
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              color: valueColor ??
-                  const Color(0xFF0B1628),
+              color: valueColor ?? const Color(0xFF0B1628),
               fontSize: 13,
-              fontWeight: bold
-                  ? FontWeight.w700
-                  : FontWeight.w600,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
             ),
           ),
         ],
@@ -1310,10 +806,6 @@ class _SummaryRow extends StatelessWidget {
     );
   }
 }
-
-// ============================================================
-// PDF BUTTONS
-// ============================================================
 
 class _PdfButtons extends StatelessWidget {
   final VoidCallback onDownload;
@@ -1333,35 +825,23 @@ class _PdfButtons extends StatelessWidget {
           height: 52,
           child: ElevatedButton.icon(
             onPressed: onDownload,
-            icon: const Icon(
-              Icons.download_outlined,
-            ),
+            icon: const Icon(Icons.download_outlined),
             label: const Text(
               'Download PDF',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
           ),
         ),
-
         const SizedBox(height: 10),
-
         SizedBox(
           width: double.infinity,
           height: 52,
           child: OutlinedButton.icon(
             onPressed: onShare,
-            icon: const Icon(
-              Icons.share_outlined,
-            ),
+            icon: const Icon(Icons.share_outlined),
             label: const Text(
               'Share PDF',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -1369,10 +849,6 @@ class _PdfButtons extends StatelessWidget {
     );
   }
 }
-
-// ============================================================
-// ERROR VIEW
-// ============================================================
 
 class _ErrorView extends StatelessWidget {
   final String message;
@@ -1391,21 +867,10 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Colors.red,
-            ),
-
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 14),
-
-            Text(
-              message,
-              textAlign: TextAlign.center,
-            ),
-
+            Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 18),
-
             ElevatedButton(
               onPressed: onRetry,
               child: const Text('Retry'),

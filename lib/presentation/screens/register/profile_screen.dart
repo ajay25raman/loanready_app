@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:loanready_app/core/constants/colors.dart';
 import 'package:loanready_app/presentation/screens/register/document_edit_screen.dart';
 import 'package:loanready_app/presentation/screens/register/edit_profile_screen.dart';
+import 'package:loanready_app/providers/auth_provider.dart';
 import 'package:loanready_app/providers/user_provider.dart';
 import 'package:loanready_app/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
@@ -79,19 +80,20 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
 
-
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = context.read<UserProvider>();
-
-      await provider.fetchProfile();
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      await provider.fetchDocuments();
+      final provider = context.read<UserProvider>();
+
+      // Parallel + cache respect karega
+      Future.wait([
+        provider.fetchProfile(),
+        provider.fetchDocuments(),
+      ]);
     });
   }
 
@@ -100,25 +102,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final r = _R(context);
     final userProvider = context.watch<UserProvider>();
 
+    final profile = userProvider.userProfile;
+
+    // Only show full screen loader when there is
+    // absolutely no profile data available.
+    final showInitialLoader =
+        profile == null && userProvider.isFetchingData;
+
+    // Only show full error screen when profile is
+    // completely unavailable.
+    final showInitialError =
+        profile == null &&
+            !userProvider.isFetchingData &&
+            userProvider.errorMessage != null;
+
     return Scaffold(
       backgroundColor: _C.bg(context),
-      body: userProvider.isFetchingData
+
+      body: showInitialLoader
           ? _ShimmerView(r: r)
-          : userProvider.errorMessage != null
+
+          : showInitialError
           ? _ErrorView(
         r: r,
-        message: userProvider.errorMessage!,
-        onRetry: () => userProvider.fetchProfile(),
+        message: _getSafeErrorMessage(
+          userProvider.errorMessage,
+        ),
+        onRetry: () {
+          final provider =
+          context.read<UserProvider>();
+
+          provider.fetchProfile();
+          provider.fetchDocuments();
+        },
       )
           : _Body(
         r: r,
-        profile: userProvider.userProfile,
+        profile: profile,
         isGuest: userProvider.isGuest,
-        onLogout: () => _showLogoutSheet(context, r),
+        onLogout: () =>
+            _showLogoutSheet(context, r),
       ),
     );
   }
 
+  String _getSafeErrorMessage(String? error) {
+    if (error == null || error.isEmpty) {
+      return 'Unable to load your profile.\nPlease try again.';
+    }
+
+    final value = error.toLowerCase();
+
+    if (value.contains('socketexception') ||
+        value.contains('no_internet') ||
+        value.contains('failed host lookup') ||
+        value.contains('network is unreachable')) {
+      return 'No internet connection.\nPlease check your network.';
+    }
+
+    if (value.contains('clientexception') ||
+        value.contains('connection aborted') ||
+        value.contains('connection abort') ||
+        value.contains('connection reset')) {
+      return 'Unable to connect to server.\nPlease try again.';
+    }
+
+    if (value.contains('timeout') ||
+        value.contains('request_timeout')) {
+      return 'Server is taking too long to respond.\nPlease try again.';
+    }
+
+    if (value.contains('session_expired')) {
+      return 'Your session has expired.\nPlease login again.';
+    }
+
+    return 'Unable to load your profile.\nPlease try again.';
+  }
   void _showLogoutSheet(BuildContext context, _R r) {
     showModalBottomSheet(
       context: context,
@@ -128,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         r: r,
         onConfirm: () async {
           Navigator.pop(context);
-          await context.read<UserProvider>().logout();
+          await context.read<AuthProvider>().logout();
           if (mounted) {
             Navigator.pushNamedAndRemoveUntil(
               context,

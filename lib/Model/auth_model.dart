@@ -19,16 +19,28 @@ class AuthModel {
     this.isProfileCompleted = false,
   });
 
-  factory AuthModel.fromJson(Map<String, dynamic> json, {bool isProfileCompleted = false}) {
+  factory AuthModel.fromJson(
+      Map<String, dynamic> json,
+      ) {
     return AuthModel(
       mobile: json['mobile']?.toString(),
       countryCode: json['countryCode']?.toString(),
       otp: json['otp']?.toString(),
-      verificationId: json['verificationId']?.toString(),
-      success: json['success'] == true || json['status'] == 200,
+      verificationId:
+      json['verificationId']?.toString(),
+
+      success:
+      json['success'] == true ||
+          json['status'] == 200,
+
       message: json['message']?.toString(),
+
       token: json['token']?.toString(),
-      isProfileCompleted: isProfileCompleted,
+
+      // IMPORTANT
+      isProfileCompleted:
+      json['isProfileCompleted'] == true ||
+          json['is_profile_completed'] == true,
     );
   }
 
@@ -41,7 +53,8 @@ class AuthModel {
       'success': success,
       'message': message,
       'token': token,
-      'isProfileCompleted': isProfileCompleted,
+      'isProfileCompleted':
+      isProfileCompleted,
     };
   }
 }

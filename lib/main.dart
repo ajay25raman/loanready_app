@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:loanready_app/payments/payment_screen.dart';
 import 'package:loanready_app/presentation/screens/register/profile_screen.dart';
 import 'package:loanready_app/providers/auth_provider.dart';
 import 'package:loanready_app/providers/business_provider.dart';
@@ -11,6 +12,7 @@ import 'package:loanready_app/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:loanready_app/routes/app_routes.dart';
 import 'firebase_options.dart';
+import 'providers/one_year_trading_provider.dart';
 
 // ThemeProvider import karo
 Future<void> main() async {
@@ -40,6 +42,7 @@ Future<void> main() async {
         ),
 
         ChangeNotifierProvider(create: (_) => DocumentProvider()),
+        ChangeNotifierProvider(create: (_) => OneYearTradingProvider()),
         ChangeNotifierProvider(create: (_) => UploadPhotoProvider()),
         ChangeNotifierProvider(
           create: (_) => ThemeProvider(),
@@ -58,6 +61,7 @@ class LoanReadyApp extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
+     // home: PaymentScreen(),
       title: 'Loan Ready App',
       debugShowCheckedModeBanner: false,
 

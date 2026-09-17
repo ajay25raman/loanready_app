@@ -560,6 +560,69 @@ class _OneYearReportsScreenState extends State<OneYearReportsScreen> {
     );
   }
 
+  String _getFriendlyErrorMessage(String? error) {
+    if (error == null || error.trim().isEmpty) {
+      return 'Unable to load reports. Please try again.';
+    }
+
+    final message = error.toLowerCase();
+
+    // ----------------------------------------------------------
+    // NO INTERNET / NETWORK ERROR
+    // ----------------------------------------------------------
+
+    if (message.contains('socketexception') ||
+        message.contains('failed host lookup') ||
+        message.contains('no address associated with hostname') ||
+        message.contains('network is unreachable') ||
+        message.contains('connection refused') ||
+        message.contains('connection reset') ||
+        message.contains('connection timed out') ||
+        message.contains('clientexception')) {
+      return 'No Internet Connection.\n'
+          'Please check your internet connection and try again.';
+    }
+
+    // ----------------------------------------------------------
+    // TIMEOUT
+    // ----------------------------------------------------------
+
+    if (message.contains('timeout') ||
+        message.contains('timed out')) {
+      return 'Request timed out.\n'
+          'Please check your internet connection and try again.';
+    }
+
+    // ----------------------------------------------------------
+    // SERVER ERROR
+    // ----------------------------------------------------------
+
+    if (message.contains('500') ||
+        message.contains('502') ||
+        message.contains('503') ||
+        message.contains('504')) {
+      return 'Server is temporarily unavailable.\n'
+          'Please try again later.';
+    }
+
+    // ----------------------------------------------------------
+    // AUTH ERROR
+    // ----------------------------------------------------------
+
+    if (message.contains('401') ||
+        message.contains('unauthorized') ||
+        message.contains('session expired')) {
+      return 'Your session has expired.\n'
+          'Please login again.';
+    }
+
+    // ----------------------------------------------------------
+    // DEFAULT
+    // ----------------------------------------------------------
+
+    return 'Unable to load financial reports.\n'
+        'Please try again.';
+  }
   void _openReport(dynamic report) {
     Navigator.push(
       context,
@@ -660,15 +723,20 @@ class _OneYearReportsScreenState extends State<OneYearReportsScreen> {
 
       body: Consumer<OneYearReportProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading) {
+          // Pehle se data hai to full loader mat dikhao
+          final bool showFullLoader =
+              provider.isLoading && provider.reports.isEmpty;
+
+          if (showFullLoader) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
-          if (provider.errorMessage != null) {
+          if (provider.errorMessage != null && provider.reports.isEmpty) {
             return _ErrorView(
-              message: provider.errorMessage!,
+              message: _getFriendlyErrorMessage(provider.errorMessage),
+              isNoInternet: provider.errorMessage == 'NO_INTERNET',
               onRetry: provider.fetchAllReports,
             );
           }
@@ -679,35 +747,32 @@ class _OneYearReportsScreenState extends State<OneYearReportsScreen> {
               child: ListView(
                 children: const [
                   SizedBox(height: 250),
-                  Center(
-                    child: Text(
-                      'No reports available',
-                    ),
-                  ),
+                  Center(child: Text('No reports available')),
                 ],
               ),
             );
           }
 
-          final reports =
-          _filteredReports(provider);
-
+          final reports = _filteredReports(provider);
           final latestReport =
-          provider.reports.isNotEmpty
-              ? provider.reports.first
-              : null;
+          provider.reports.isNotEmpty ? provider.reports.first : null;
 
           return RefreshIndicator(
             onRefresh: provider.fetchAllReports,
-
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                30,
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
               children: [
+                // Optional: small loading indicator on top when refreshing
+                if (provider.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      backgroundColor: Color(0xFFE8EAF0),
+                      color: Color(0xFF0B1628),
+                    ),
+                  ),
+
                 _SearchBar(
                   controller: _searchController,
                   onFilter: _showFilterSheet,
@@ -720,8 +785,7 @@ class _OneYearReportsScreenState extends State<OneYearReportsScreen> {
                     report: latestReport,
                     money: money,
                     date: date,
-                    onView: () =>
-                        _openReport(latestReport),
+                    onView: () => _openReport(latestReport),
                   ),
 
                 const SizedBox(height: 22),
@@ -751,31 +815,21 @@ class _OneYearReportsScreenState extends State<OneYearReportsScreen> {
 
                 if (reports.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.only(
-                      top: 80,
-                    ),
+                    padding: EdgeInsets.only(top: 80),
                     child: Center(
-                      child: Text(
-                        'No reports match your filters',
-                      ),
+                      child: Text('No reports match your filters'),
                     ),
                   ),
 
                 ...reports.map(
                       (report) => Padding(
-                    padding:
-                    const EdgeInsets.only(
-                      bottom: 10,
-                    ),
+                    padding: const EdgeInsets.only(bottom: 10),
                     child: _ReportCard(
                       report: report,
                       money: money,
                       date: date,
-                      isLatest:
-                      report.id ==
-                          latestReport?.id,
-                      onTap: () =>
-                          _openReport(report),
+                      isLatest: report.id == latestReport?.id,
+                      onTap: () => _openReport(report),
                     ),
                   ),
                 ),
@@ -1311,10 +1365,12 @@ class _FilterChoice extends StatelessWidget {
 
 class _ErrorView extends StatelessWidget {
   final String message;
+  final bool isNoInternet;
   final Future<void> Function() onRetry;
 
   const _ErrorView({
     required this.message,
+    required this.isNoInternet,
     required this.onRetry,
   });
 
@@ -1322,28 +1378,87 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Colors.red,
+            Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                color: isNoInternet
+                    ? const Color(0xFFFFF4E5)
+                    : const Color(0xFFFFEEEE),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isNoInternet
+                    ? Icons.wifi_off_rounded
+                    : Icons.error_outline_rounded,
+                size: 42,
+                color: isNoInternet
+                    ? const Color(0xFFE09A00)
+                    : const Color(0xFFE53935),
+              ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+
+            Text(
+              isNoInternet
+                  ? 'No Internet Connection'
+                  : 'Unable to Load Reports',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0B1628),
+              ),
+            ),
+
+            const SizedBox(height: 10),
 
             Text(
               message,
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: Colors.grey.shade600,
+              ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            ElevatedButton(
-              onPressed: onRetry,
-              child: const Text('Retry'),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  size: 20,
+                ),
+                label: const Text(
+                  'Retry',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                  const Color(0xFF0B1628),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 26,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                    BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
